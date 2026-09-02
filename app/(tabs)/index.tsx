@@ -65,14 +65,22 @@ export default function HomeScreen() {
         </ThemedText>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
+        <ThemedText type="subtitle">Tài khoản & Xác thực</ThemedText>
         <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+          Trải nghiệm giao diện đăng nhập và đăng ký mới tạo:
         </ThemedText>
+        <ThemedView style={styles.authButtonsRow}>
+          <Link href="/(auth)/login" asChild>
+            <ThemedText type="defaultSemiBold" style={styles.authButton}>
+              🔐 Mở Trang Đăng Nhập
+            </ThemedText>
+          </Link>
+          <Link href="/(auth)/register" asChild>
+            <ThemedText type="defaultSemiBold" style={styles.authButton}>
+              📝 Mở Trang Đăng Ký
+            </ThemedText>
+          </Link>
+        </ThemedView>
       </ThemedView>
     </ParallaxScrollView>
   );
@@ -94,5 +102,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     position: 'absolute',
+  },
+  authButtonsRow: {
+    gap: 10,
+    marginTop: 8,
+  },
+  authButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+    color: '#4F46E5',
+    overflow: 'hidden',
   },
 });
