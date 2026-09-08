@@ -1,3 +1,4 @@
+// Màn hình gốc của ứng dụng
 import { Stack } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import { StatusBar } from 'expo-status-bar';

@@ -1,3 +1,4 @@
+// Component bảng điều hướng tab chính
 import { Tabs } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
