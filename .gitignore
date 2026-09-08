@@ -3,6 +3,11 @@
 # dependencies
 node_modules/
 
+# .NET and Visual Studio generated files
+.vs/
+**/bin/
+**/obj/
+
 # Expo
 .expo/
 dist/
