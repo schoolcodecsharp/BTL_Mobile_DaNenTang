@@ -17,9 +17,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { login } from '@/lib/auth-api';
+import { useAuthSession } from '@/components/auth-session';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, signOut } = useAuthSession();
   const { registered } = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -49,7 +51,8 @@ export default function LoginScreen() {
     setErrorMessage('');
     setIsLoading(true);
     try {
-      await login({ usernameOrEmail: email, password });
+      const user = await login({ usernameOrEmail: email, password });
+      signIn(user);
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       router.replace('/(tabs)');
     } catch (error) {
@@ -154,7 +157,7 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.guestButton} onPress={() => router.replace('/(tabs)')} disabled={isLoading} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.guestButton} onPress={() => { signOut(); router.replace('/(tabs)'); }} disabled={isLoading} activeOpacity={0.7}>
               <Text style={[styles.guestButtonText, { color: theme.subText }]}>Bỏ qua và dùng thử với tư cách Khách</Text>
             </TouchableOpacity>
           </View>
