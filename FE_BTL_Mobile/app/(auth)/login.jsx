@@ -1,10 +1,9 @@
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -17,17 +16,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { login } from '@/lib/auth-api';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { registered } = useLocalSearchParams();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
@@ -44,53 +45,18 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!email.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập email hoặc tên đăng nhập.');
-      return;
-    }
-    if (!password) {
-      Alert.alert('Thông báo', 'Vui lòng nhập mật khẩu.');
-      return;
-    }
-
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {
-      // Haptics optional
-    }
-
+    if (isLoading) return;
+    setErrorMessage('');
     setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      Alert.alert('Thành công', `Chào mừng ${email.split('@')[0]} quay trở lại!`, [
-        {
-          text: 'Bắt đầu',
-          onPress: () => router.replace('/(tabs)'),
-        },
-      ]);
-    }, 1200);
-  };
-
-  const handleForgotPassword = () => {
-    Alert.alert(
-      'Quên mật khẩu',
-      'Vui lòng nhập email đã đăng ký để nhận liên kết đặt lại mật khẩu.',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Gửi yêu cầu',
-          onPress: () => Alert.alert('Đã gửi', 'Vui lòng kiểm tra hộp thư của bạn!'),
-        },
-      ]
-    );
-  };
-
-  const handleSocialLogin = (provider) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    Alert.alert(`Đăng nhập với ${provider}`, `Đang kết nối tới ${provider}...`);
+      await login({ usernameOrEmail: email, password });
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      router.replace('/(tabs)');
+    } catch (error) {
+      setErrorMessage(error.message || 'Không thể đăng nhập. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -115,6 +81,11 @@ export default function LoginScreen() {
           </View>
 
           <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+            {registered === '1' && (
+              <Text accessibilityRole="alert" style={[styles.feedback, { color: isDark ? '#6EE7B7' : '#047857' }]}>
+                Đăng ký thành công. Vui lòng đăng nhập bằng tài khoản vừa tạo.
+              </Text>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={[styles.label, { color: theme.text }]}>Email hoặc Tên đăng nhập</Text>
@@ -127,6 +98,8 @@ export default function LoginScreen() {
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
                   keyboardType="email-address"
                   onFocus={() => setEmailFocused(true)}
                   onBlur={() => setEmailFocused(false)}
@@ -151,6 +124,8 @@ export default function LoginScreen() {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
                 />
@@ -160,15 +135,9 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <View style={styles.optionsRow}>
-              <TouchableOpacity style={styles.rememberMeContainer} onPress={() => setRememberMe(!rememberMe)} activeOpacity={0.7}>
-                <Ionicons name={rememberMe ? 'checkbox' : 'square-outline'} size={20} color={rememberMe ? theme.primaryLight : theme.subText} />
-                <Text style={[styles.rememberMeText, { color: theme.text }]}>Ghi nhớ</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleForgotPassword} activeOpacity={0.7}>
-                <Text style={[styles.forgotPasswordText, { color: theme.primaryLight }]}>Quên mật khẩu?</Text>
-              </TouchableOpacity>
-            </View>
+            {!!errorMessage && (
+              <Text accessibilityRole="alert" style={[styles.feedback, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>{errorMessage}</Text>
+            )}
 
             <TouchableOpacity
               style={[styles.submitButton, { backgroundColor: theme.primary }, isLoading && styles.submitButtonDisabled]}
@@ -185,33 +154,15 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.guestButton} onPress={() => router.replace('/(tabs)')} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.guestButton} onPress={() => router.replace('/(tabs)')} disabled={isLoading} activeOpacity={0.7}>
               <Text style={[styles.guestButtonText, { color: theme.subText }]}>Bỏ qua và dùng thử với tư cách Khách</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.dividerContainer}>
-            <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-            <Text style={[styles.dividerText, { color: theme.subText, backgroundColor: theme.bg }]}>hoặc tiếp tục với</Text>
-            <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-          </View>
-
-          <View style={styles.socialButtonsRow}>
-            <TouchableOpacity style={[styles.socialButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => handleSocialLogin('Google')} activeOpacity={0.75}>
-              <FontAwesome name="google" size={20} color="#EA4335" />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.socialButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => handleSocialLogin('Apple')} activeOpacity={0.75}>
-              <FontAwesome name="apple" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.socialButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => handleSocialLogin('Facebook')} activeOpacity={0.75}>
-              <FontAwesome name="facebook" size={20} color="#1877F2" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: theme.subText }]}>Chưa có tài khoản? </Text>
             <Link href="/(auth)/register" asChild>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity disabled={isLoading} activeOpacity={0.7}>
                 <Text style={[styles.signupLink, { color: theme.primaryLight }]}>Đăng ký ngay</Text>
               </TouchableOpacity>
             </Link>
@@ -237,21 +188,13 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, paddingHorizontal: 14, height: 50 },
   inputIcon: { marginRight: 10 },
   input: { flex: 1, fontSize: 15, paddingVertical: 0 },
-  optionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
-  rememberMeContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rememberMeText: { fontSize: 13, fontWeight: '500' },
-  forgotPasswordText: { fontSize: 13, fontWeight: '600' },
+  feedback: { fontSize: 13, lineHeight: 20, marginBottom: 16 },
   submitButton: { height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 4 },
   submitButtonDisabled: { opacity: 0.7 },
   buttonInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   guestButton: { marginTop: 14, alignItems: 'center', paddingVertical: 6 },
   guestButtonText: { fontSize: 13, fontWeight: '500', textDecorationLine: 'underline' },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { paddingHorizontal: 14, fontSize: 13, fontWeight: '500' },
-  socialButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 28 },
-  socialButton: { width: 58, height: 52, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   footerText: { fontSize: 14 },
   signupLink: { fontSize: 14, fontWeight: '700' },

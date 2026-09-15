@@ -1,10 +1,9 @@
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -17,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { register } from '@/lib/auth-api';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -24,6 +24,7 @@ export default function RegisterScreen() {
   const isDark = colorScheme === 'dark';
 
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,7 +32,9 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [nameFocused, setNameFocused] = useState(false);
+  const [usernameFocused, setUsernameFocused] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
@@ -68,26 +71,20 @@ export default function RegisterScreen() {
   const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
   const handleRegister = async () => {
-    if (!fullName.trim()) { Alert.alert('Thông báo', 'Vui lòng nhập họ và tên.'); return; }
-    if (!email.trim()) { Alert.alert('Thông báo', 'Vui lòng nhập email.'); return; }
-    if (password.length < 6) { Alert.alert('Thông báo', 'Mật khẩu phải chứa ít nhất 6 ký tự.'); return; }
-    if (password !== confirmPassword) { Alert.alert('Thông báo', 'Mật khẩu xác nhận không khớp.'); return; }
-    if (!agreeTerms) { Alert.alert('Thông báo', 'Vui lòng đồng ý với Điều khoản dịch vụ & Chính sách bảo mật.'); return; }
-
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-
+    if (isLoading) return;
+    setErrorMessage('');
+    if (password !== confirmPassword) { setErrorMessage('Mật khẩu xác nhận không khớp.'); return; }
+    if (!agreeTerms) { setErrorMessage('Vui lòng đồng ý với Điều khoản dịch vụ & Chính sách bảo mật.'); return; }
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await register({ username, email, password, fullName });
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      router.replace({ pathname: '/(auth)/login', params: { registered: '1' } });
+    } catch (error) {
+      setErrorMessage(error.message || 'Không thể đăng ký. Vui lòng thử lại.');
+    } finally {
       setIsLoading(false);
-      Alert.alert('Đăng ký thành công! 🎉', `Tài khoản ${email} đã sẵn sàng.`, [
-        { text: 'Đăng nhập ngay', onPress: () => router.replace('/(tabs)') },
-      ]);
-    }, 1500);
-  };
-
-  const handleSocialRegister = (provider) => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    Alert.alert(`Đăng ký với ${provider}`, `Đang kết nối tới tài khoản ${provider}...`);
+    }
   };
 
   return (
@@ -96,7 +93,7 @@ export default function RegisterScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           <View style={styles.topBar}>
-            <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => router.back()} activeOpacity={0.7}>
+            <TouchableOpacity style={[styles.backButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')} disabled={isLoading} activeOpacity={0.7}>
               <Ionicons name="arrow-back" size={20} color={theme.text} />
             </TouchableOpacity>
           </View>
@@ -112,7 +109,15 @@ export default function RegisterScreen() {
               <Text style={[styles.label, { color: theme.text }]}>Họ và tên</Text>
               <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: nameFocused ? theme.primaryLight : theme.border }]}>
                 <Ionicons name="person-outline" size={20} color={nameFocused ? theme.primaryLight : theme.subText} style={styles.inputIcon} />
-                <TextInput style={[styles.input, { color: theme.text }]} placeholder="Nguyễn Văn A" placeholderTextColor={theme.subText} value={fullName} onChangeText={setFullName} autoCapitalize="words" onFocus={() => setNameFocused(true)} onBlur={() => setNameFocused(false)} />
+                <TextInput style={[styles.input, { color: theme.text }]} placeholder="Nguyễn Văn A" placeholderTextColor={theme.subText} value={fullName} onChangeText={setFullName} maxLength={100} editable={!isLoading} autoCapitalize="words" onFocus={() => setNameFocused(true)} onBlur={() => setNameFocused(false)} />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: theme.text }]}>Tên đăng nhập</Text>
+              <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: usernameFocused ? theme.primaryLight : theme.border }]}>
+                <Ionicons name="at-outline" size={20} color={usernameFocused ? theme.primaryLight : theme.subText} style={styles.inputIcon} />
+                <TextInput style={[styles.input, { color: theme.text }]} placeholder="nguyenvana" placeholderTextColor={theme.subText} value={username} onChangeText={setUsername} maxLength={50} editable={!isLoading} autoCapitalize="none" autoCorrect={false} onFocus={() => setUsernameFocused(true)} onBlur={() => setUsernameFocused(false)} />
               </View>
             </View>
 
@@ -120,7 +125,7 @@ export default function RegisterScreen() {
               <Text style={[styles.label, { color: theme.text }]}>Địa chỉ Email</Text>
               <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: emailFocused ? theme.primaryLight : theme.border }]}>
                 <Ionicons name="mail-outline" size={20} color={emailFocused ? theme.primaryLight : theme.subText} style={styles.inputIcon} />
-                <TextInput style={[styles.input, { color: theme.text }]} placeholder="email@domain.com" placeholderTextColor={theme.subText} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" onFocus={() => setEmailFocused(true)} onBlur={() => setEmailFocused(false)} />
+                <TextInput style={[styles.input, { color: theme.text }]} placeholder="email@domain.com" placeholderTextColor={theme.subText} value={email} onChangeText={setEmail} maxLength={100} editable={!isLoading} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" onFocus={() => setEmailFocused(true)} onBlur={() => setEmailFocused(false)} />
               </View>
             </View>
 
@@ -128,7 +133,7 @@ export default function RegisterScreen() {
               <Text style={[styles.label, { color: theme.text }]}>Mật khẩu</Text>
               <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: passwordFocused ? theme.primaryLight : theme.border }]}>
                 <Ionicons name="lock-closed-outline" size={20} color={passwordFocused ? theme.primaryLight : theme.subText} style={styles.inputIcon} />
-                <TextInput style={[styles.input, { color: theme.text }]} placeholder="Tối thiểu 6 ký tự" placeholderTextColor={theme.subText} value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} />
+                <TextInput style={[styles.input, { color: theme.text }]} placeholder="Tối thiểu 6 ký tự" placeholderTextColor={theme.subText} value={password} onChangeText={setPassword} editable={!isLoading} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.subText} />
                 </TouchableOpacity>
@@ -163,14 +168,14 @@ export default function RegisterScreen() {
               </View>
               <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: passwordsMismatch ? theme.danger : confirmPasswordFocused ? theme.primaryLight : theme.border }]}>
                 <Ionicons name="shield-checkmark-outline" size={20} color={confirmPasswordFocused ? theme.primaryLight : theme.subText} style={styles.inputIcon} />
-                <TextInput style={[styles.input, { color: theme.text }]} placeholder="Nhập lại mật khẩu" placeholderTextColor={theme.subText} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showConfirmPassword} autoCapitalize="none" onFocus={() => setConfirmPasswordFocused(true)} onBlur={() => setConfirmPasswordFocused(false)} />
+                <TextInput style={[styles.input, { color: theme.text }]} placeholder="Nhập lại mật khẩu" placeholderTextColor={theme.subText} value={confirmPassword} onChangeText={setConfirmPassword} editable={!isLoading} secureTextEntry={!showConfirmPassword} autoCapitalize="none" autoCorrect={false} onFocus={() => setConfirmPasswordFocused(true)} onBlur={() => setConfirmPasswordFocused(false)} />
                 <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.subText} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.termsRow} onPress={() => setAgreeTerms(!agreeTerms)} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.termsRow} onPress={() => setAgreeTerms(!agreeTerms)} disabled={isLoading} activeOpacity={0.7}>
               <Ionicons name={agreeTerms ? 'checkbox' : 'square-outline'} size={22} color={agreeTerms ? theme.primaryLight : theme.subText} />
               <Text style={[styles.termsText, { color: theme.subText }]}>
                 Tôi đồng ý với{' '}
@@ -179,6 +184,10 @@ export default function RegisterScreen() {
                 <Text style={{ color: theme.primaryLight, fontWeight: '600' }}>Chính sách bảo mật</Text>
               </Text>
             </TouchableOpacity>
+
+            {!!errorMessage && (
+              <Text accessibilityRole="alert" style={[styles.feedback, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>{errorMessage}</Text>
+            )}
 
             <TouchableOpacity style={[styles.submitButton, { backgroundColor: theme.primary }, isLoading && styles.submitButtonDisabled]} onPress={handleRegister} disabled={isLoading} activeOpacity={0.85}>
               {isLoading ? (
@@ -192,28 +201,10 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.dividerContainer}>
-            <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-            <Text style={[styles.dividerText, { color: theme.subText, backgroundColor: theme.bg }]}>hoặc đăng ký bằng</Text>
-            <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-          </View>
-
-          <View style={styles.socialButtonsRow}>
-            <TouchableOpacity style={[styles.socialButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => handleSocialRegister('Google')} activeOpacity={0.75}>
-              <FontAwesome name="google" size={20} color="#EA4335" />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.socialButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => handleSocialRegister('Apple')} activeOpacity={0.75}>
-              <FontAwesome name="apple" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.socialButton, { backgroundColor: theme.cardBg, borderColor: theme.border }]} onPress={() => handleSocialRegister('Facebook')} activeOpacity={0.75}>
-              <FontAwesome name="facebook" size={20} color="#1877F2" />
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: theme.subText }]}>Đã có tài khoản? </Text>
             <Link href="/(auth)/login" asChild>
-              <TouchableOpacity activeOpacity={0.7}>
+              <TouchableOpacity disabled={isLoading} activeOpacity={0.7}>
                 <Text style={[styles.loginLink, { color: theme.primaryLight }]}>Đăng nhập</Text>
               </TouchableOpacity>
             </Link>
@@ -248,15 +239,11 @@ const styles = StyleSheet.create({
   strengthLabel: { fontSize: 12, fontWeight: '600' },
   termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 6, marginBottom: 18 },
   termsText: { fontSize: 12.5, lineHeight: 18, flex: 1 },
+  feedback: { fontSize: 13, lineHeight: 20, marginBottom: 16 },
   submitButton: { height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 4 },
   submitButtonDisabled: { opacity: 0.7 },
   buttonInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { paddingHorizontal: 14, fontSize: 13, fontWeight: '500' },
-  socialButtonsRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 24 },
-  socialButton: { width: 58, height: 50, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 },
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
   footerText: { fontSize: 14 },
   loginLink: { fontSize: 14, fontWeight: '700' },
