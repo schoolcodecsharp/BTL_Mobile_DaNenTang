@@ -1,4 +1,3 @@
-// Component text có hỗ trợ theme sáng/tối
 import { StyleSheet, Text } from 'react-native';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
