@@ -24,14 +24,10 @@ export default function HomeScreen() {
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
+          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.jsx</ThemedText> to see changes.
           Press{' '}
           <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
+            {Platform.select({ ios: 'cmd + d', android: 'cmd + m', web: 'F12' })}
           </ThemedText>{' '}
           to open developer tools.
         </ThemedText>
@@ -44,41 +40,23 @@ export default function HomeScreen() {
           <Link.Preview />
           <Link.Menu>
             <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
+            <Link.MenuAction title="Share" icon="square.and.arrow.up" onPress={() => alert('Share pressed')} />
             <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
+              <Link.MenuAction title="Delete" icon="trash" destructive onPress={() => alert('Delete pressed')} />
             </Link.Menu>
           </Link.Menu>
         </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
+        <ThemedText>{`Tap the Explore tab to learn more about what's included in this starter app.`}</ThemedText>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Tài khoản & Xác thực</ThemedText>
-        <ThemedText>
-          Trải nghiệm giao diện đăng nhập và đăng ký mới tạo:
-        </ThemedText>
+        <ThemedText>Trải nghiệm giao diện đăng nhập và đăng ký mới tạo:</ThemedText>
         <ThemedView style={styles.authButtonsRow}>
           <Link href="/(auth)/login" asChild>
-            <ThemedText type="defaultSemiBold" style={styles.authButton}>
-              🔐 Mở Trang Đăng Nhập
-            </ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.authButton}>🔐 Mở Trang Đăng Nhập</ThemedText>
           </Link>
           <Link href="/(auth)/register" asChild>
-            <ThemedText type="defaultSemiBold" style={styles.authButton}>
-              📝 Mở Trang Đăng Ký
-            </ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.authButton}>📝 Mở Trang Đăng Ký</ThemedText>
           </Link>
         </ThemedView>
       </ThemedView>
@@ -87,32 +65,9 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-  authButtonsRow: {
-    gap: 10,
-    marginTop: 8,
-  },
-  authButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-    color: '#4F46E5',
-    overflow: 'hidden',
-  },
+  titleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepContainer: { gap: 8, marginBottom: 8 },
+  reactLogo: { height: 178, width: 290, bottom: 0, left: 0, position: 'absolute' },
+  authButtonsRow: { gap: 10, marginTop: 8 },
+  authButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, backgroundColor: 'rgba(79, 70, 229, 0.1)', color: '#4F46E5', overflow: 'hidden' },
 });
