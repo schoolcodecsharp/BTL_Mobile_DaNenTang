@@ -1,7 +1,6 @@
 const { Router } = require('express');
-const { Nhom, ThanhVienNhom, NguoiDung, CongViecNhom } = require('../models');
-const { Op } = require('sequelize');
-
+const { sequelize, Nhom, ThanhVienNhom, NguoiDung, CongViecNhom } = require('../models');
+const { requireAuth } = require('../middleware/auth');
 const router = Router();
 
 // Helper: format member
@@ -67,331 +66,236 @@ function formatGroupTask(task) {
   };
 }
 
-// GET /api/teams  – Danh sách nhóm của user (query: userId)
-router.get('/', async (req, res) => {
-  try {
-    const userId = parseInt(req.query.userId, 10);
-    if (!userId) return res.status(400).json({ message: 'userId là bắt buộc.' });
-
-    const memberships = await ThanhVienNhom.findAll({
-      where: { nguoi_dung_id: userId },
-      include: [{
-        model: Nhom,
-        as: 'nhom',
-        include: [{ model: NguoiDung, as: 'truongNhom', attributes: ['id', 'ten_dang_nhap', 'ho_ten', 'email'] }],
-      }],
-    });
-
-    const groups = memberships.map((m) => formatGroup(m.nhom, []));
-    return res.json(groups);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
+const USER_FIELDS = ['id', 'ten_dang_nhap', 'ho_ten', 'email'];
+const ownerInclude = [{ model: NguoiDung, as: 'truongNhom', attributes: USER_FIELDS }];
+const memberInclude = [{ model: NguoiDung, as: 'nguoiDung', attributes: USER_FIELDS }];
+const taskInclude = ['nguoiGiao', 'nguoiNhan'].map(as => ({ model: NguoiDung, as, attributes: USER_FIELDS }));
+const priorities = ['THAP', 'TRUNG_BINH', 'CAO'];
+const statuses = ['CHUA_LAM', 'DANG_LAM', 'HOAN_THANH', 'QUA_HAN'];
+function fail(status, message) { throw Object.assign(new Error(message), { status }); }
+function id(value) {
+  if (!/^[1-9]\d*$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) > 2147483647) {
+    fail(400, 'ID phải là số nguyên dương hợp lệ.');
   }
-});
-
-// POST /api/teams  – Tạo nhóm mới
-router.post('/', async (req, res) => {
-  try {
-    const { tenNhom, moTa, userId } = req.body;
-    const uid = parseInt(userId, 10);
-    if (!tenNhom?.trim()) return res.status(400).json({ message: 'Tên nhóm là bắt buộc.' });
-    if (!uid) return res.status(400).json({ message: 'userId là bắt buộc.' });
-
-    const now = new Date();
-    const nhom = await Nhom.create({
-      ten_nhom: tenNhom.trim(),
-      mo_ta: moTa?.trim() || null,
-      truong_nhom_id: uid,
-      ngay_tao: now,
-    });
-
-    // Tự động thêm người tạo là trưởng nhóm
-    await ThanhVienNhom.create({
-      nhom_id: nhom.id,
-      nguoi_dung_id: uid,
-      vai_tro: 'TRUONG_NHOM',
-      ngay_tham_gia: now,
-    });
-
-    const created = await Nhom.findByPk(nhom.id, {
-      include: [{ model: NguoiDung, as: 'truongNhom', attributes: ['id', 'ten_dang_nhap', 'ho_ten', 'email'] }],
-    });
-    return res.status(201).json(formatGroup(created, []));
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
+  return Number(value);
+}
+function text(value, name, max, required = false) {
+  if (value == null && !required) return null;
+  if (typeof value !== 'string' || value.trim().length > max || (required && !value.trim())) {
+    fail(400, `${name} không hợp lệ (tối đa ${max} ký tự).`);
   }
-});
-
-// GET /api/teams/:teamId  – Chi tiết nhóm + thành viên
-router.get('/:teamId', async (req, res) => {
-  try {
-    const nhom = await Nhom.findByPk(req.params.teamId, {
-      include: [{ model: NguoiDung, as: 'truongNhom', attributes: ['id', 'ten_dang_nhap', 'ho_ten', 'email'] }],
-    });
-    if (!nhom) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
-
-    const members = await ThanhVienNhom.findAll({
-      where: { nhom_id: nhom.id },
-      include: [{ model: NguoiDung, as: 'nguoiDung', attributes: ['id', 'ten_dang_nhap', 'ho_ten', 'email'] }],
-    });
-
-    return res.json(formatGroup(nhom, members));
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
-  }
-});
-
-// POST /api/teams/:teamId/invite  – Mời thành viên (chỉ trưởng nhóm)
-router.post('/:teamId/invite', async (req, res) => {
-  try {
-    const { userId, inviteEmail } = req.body;
-    const uid = parseInt(userId, 10);
-
-    const nhom = await Nhom.findByPk(req.params.teamId);
-    if (!nhom) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
-
-    // Kiểm tra quyền trưởng nhóm
-    const callerMembership = await ThanhVienNhom.findOne({
-      where: { nhom_id: nhom.id, nguoi_dung_id: uid },
-    });
-    if (!callerMembership || callerMembership.vai_tro !== 'TRUONG_NHOM') {
-      return res.status(403).json({ message: 'Chỉ trưởng nhóm mới có thể mời thành viên.' });
+  return value.trim() || null;
+}
+function endpoint(handler) {
+  return async (req, res, next) => {
+    try { await handler(req, res); }
+    catch (error) {
+      if (error.status) return res.status(error.status).json({ message: error.message });
+      if (error.name === 'SequelizeUniqueConstraintError') return res.status(409).json({ message: 'Thành viên đã có trong nhóm.' });
+      next(error);
     }
-
-    if (!inviteEmail?.trim()) return res.status(400).json({ message: 'Email người được mời là bắt buộc.' });
-
-    const invitee = await NguoiDung.findOne({ where: { email: inviteEmail.trim() } });
-    if (!invitee) return res.status(404).json({ message: 'Không tìm thấy người dùng với email này.' });
-
-    // Kiểm tra đã là thành viên chưa
-    const existing = await ThanhVienNhom.findOne({
-      where: { nhom_id: nhom.id, nguoi_dung_id: invitee.id },
-    });
-    if (existing) return res.status(400).json({ message: 'Người dùng này đã là thành viên của nhóm.' });
-
-    const member = await ThanhVienNhom.create({
-      nhom_id: nhom.id,
-      nguoi_dung_id: invitee.id,
-      vai_tro: 'THANH_VIEN',
-      ngay_tham_gia: new Date(),
-    });
-
-    const full = await ThanhVienNhom.findByPk(member.id, {
-      include: [{ model: NguoiDung, as: 'nguoiDung', attributes: ['id', 'ten_dang_nhap', 'ho_ten', 'email'] }],
-    });
-
-    return res.status(201).json(formatMember(full));
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
+  };
+}
+router.use(requireAuth);
+router.use((req, res, next) => {
+  if (req.body == null || Array.isArray(req.body) || typeof req.body !== 'object') {
+    return res.status(400).json({ message: 'Body phải là một JSON object.' });
   }
+  // Legacy clients may still send userId, but cannot use it to impersonate others.
+  const claimed = [req.body.userId, req.query.userId].filter(value => value !== undefined);
+  if (claimed.some(value => String(value) !== String(req.auth.userId))) {
+    return res.status(403).json({ message: 'userId không khớp tài khoản đăng nhập.' });
+  }
+  next();
 });
 
-// POST /api/teams/:teamId/transfer-leader  – Chuyển trưởng nhóm
-router.post('/:teamId/transfer-leader', async (req, res) => {
-  try {
-    const { userId, newLeaderId } = req.body;
-    const uid = parseInt(userId, 10);
-    const newId = parseInt(newLeaderId, 10);
-
-    const nhom = await Nhom.findByPk(req.params.teamId);
-    if (!nhom) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
-
-    // Kiểm tra quyền trưởng nhóm
-    const callerMembership = await ThanhVienNhom.findOne({
-      where: { nhom_id: nhom.id, nguoi_dung_id: uid },
-    });
-    if (!callerMembership || callerMembership.vai_tro !== 'TRUONG_NHOM') {
-      return res.status(403).json({ message: 'Chỉ trưởng nhóm mới có thể chuyển quyền.' });
+// All group mutations serialize on the group row. Membership/ownership checks
+// and writes share the transaction, including transfers, removals and assignments.
+async function inTeam(req, action, ownerOnly = false) {
+  const teamId = id(req.params.teamId);
+  return sequelize.transaction(async transaction => {
+    const team = await Nhom.findByPk(teamId, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!team) fail(404, 'Không tìm thấy nhóm.');
+    const member = await ThanhVienNhom.findOne({ where: { nhom_id: teamId, nguoi_dung_id: req.auth.userId }, transaction });
+    if (!member) fail(403, 'Bạn không phải thành viên nhóm này.');
+    if (ownerOnly && team.truong_nhom_id !== req.auth.userId) fail(403, 'Chỉ trưởng nhóm có quyền thực hiện thao tác này.');
+    return action(team, transaction);
+  });
+}
+async function members(teamId, transaction) {
+  return ThanhVienNhom.findAll({ where: { nhom_id: teamId }, include: memberInclude, order: [['id', 'ASC']], transaction });
+}
+async function activeMember(teamId, userId, transaction) {
+  const membership = await ThanhVienNhom.findOne({ where: { nhom_id: teamId, nguoi_dung_id: userId }, transaction });
+  const user = membership && await NguoiDung.findByPk(userId, { transaction });
+  if (!membership || !user?.trang_thai) fail(400, 'Người nhận phải là thành viên đang hoạt động của nhóm.');
+}
+async function taskInTeam(req, team, transaction) {
+  const task = await CongViecNhom.findOne({ where: { id: id(req.params.taskId), nhom_id: team.id }, transaction });
+  if (!task) fail(404, 'Không tìm thấy công việc trong nhóm.');
+  return task;
+}
+function taskValues(body, partial = false) {
+  const values = {};
+  if (!partial || body.tieuDe !== undefined) values.tieu_de = text(body.tieuDe, 'Tiêu đề', 200, true);
+  if (!partial || body.moTa !== undefined) values.mo_ta = text(body.moTa, 'Mô tả', 10000);
+  if (!partial || body.mucDoUuTien !== undefined) {
+    const priority = body.mucDoUuTien === undefined ? 'TRUNG_BINH' : body.mucDoUuTien;
+    if (!priorities.includes(priority)) fail(400, 'Mức độ ưu tiên không hợp lệ.');
+    values.muc_do_uu_tien = priority;
+  }
+  if (!partial || body.hanHoanThanh !== undefined) {
+    const due = body.hanHoanThanh;
+    if (due != null && (typeof due !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(due) || !Number.isFinite(Date.parse(due)))) {
+      fail(400, 'Hạn hoàn thành phải là ngày giờ ISO hợp lệ hoặc null.');
     }
-
-    if (uid === newId) return res.status(400).json({ message: 'Không thể chuyển quyền cho chính mình.' });
-
-    // Người nhận phải là thành viên của nhóm
-    const newLeaderMembership = await ThanhVienNhom.findOne({
-      where: { nhom_id: nhom.id, nguoi_dung_id: newId },
-    });
-    if (!newLeaderMembership) {
-      return res.status(404).json({ message: 'Người được chuyển quyền không phải thành viên của nhóm.' });
-    }
-
-    // Thực hiện chuyển quyền
-    callerMembership.vai_tro = 'THANH_VIEN';
-    await callerMembership.save();
-
-    newLeaderMembership.vai_tro = 'TRUONG_NHOM';
-    await newLeaderMembership.save();
-
-    nhom.truong_nhom_id = newId;
-    await nhom.save();
-
-    return res.json({ message: 'Chuyển trưởng nhóm thành công.' });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
+    values.han_hoan_thanh = due == null ? null : new Date(due);
   }
-});
-
-// DELETE /api/teams/:teamId/members/:memberId  – Xóa thành viên (chỉ trưởng nhóm)
-router.delete('/:teamId/members/:memberId', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const uid = parseInt(userId, 10);
-    const memberId = parseInt(req.params.memberId, 10);
-
-    const nhom = await Nhom.findByPk(req.params.teamId);
-    if (!nhom) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
-
-    const callerMembership = await ThanhVienNhom.findOne({
-      where: { nhom_id: nhom.id, nguoi_dung_id: uid },
-    });
-    if (!callerMembership || callerMembership.vai_tro !== 'TRUONG_NHOM') {
-      return res.status(403).json({ message: 'Chỉ trưởng nhóm mới có thể xóa thành viên.' });
-    }
-
-    const target = await ThanhVienNhom.findOne({
-      where: { nhom_id: nhom.id, nguoi_dung_id: memberId },
-    });
-    if (!target) return res.status(404).json({ message: 'Thành viên không tồn tại.' });
-    if (target.vai_tro === 'TRUONG_NHOM') {
-      return res.status(400).json({ message: 'Không thể xóa trưởng nhóm.' });
-    }
-
-    await target.destroy();
-    return res.status(204).end();
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
+  if (!partial || body.nguoiNhanId !== undefined) values.nguoi_nhan_id = body.nguoiNhanId == null ? null : id(body.nguoiNhanId);
+  if (!partial || body.fileDinhKem !== undefined) {
+    const files = body.fileDinhKem ?? [];
+    if (!Array.isArray(files) || files.length > 10 || files.some(file =>
+      !file || typeof file !== 'object' || Array.isArray(file) ||
+      typeof file.url !== 'string' || file.url.length > 2048 ||
+      !(/^(https?:\/\/|\/uploads\/)/.test(file.url)) ||
+      typeof file.filename !== 'string' || file.filename.length > 255 ||
+      typeof file.mimetype !== 'string' || file.mimetype.length > 100 ||
+      !Number.isSafeInteger(file.size) || file.size < 0)) fail(400, 'Danh sách tệp đính kèm không hợp lệ.');
+    values.file_dinh_kem = JSON.stringify(files);
   }
-});
+  return values;
+}
 
-// DELETE /api/teams/:teamId/leave  – Rời nhóm (thành viên thường)
-router.delete('/:teamId/leave', async (req, res) => {
-  try {
-    const { userId } = req.body;
-    const uid = parseInt(userId, 10);
+router.get('/', endpoint(async (req, res) => {
+  const memberships = await ThanhVienNhom.findAll({
+    where: { nguoi_dung_id: req.auth.userId },
+    include: [{ model: Nhom, as: 'nhom', include: ownerInclude }], order: [['id', 'DESC']],
+  });
+  res.json(memberships.filter(m => m.nhom).map(m => formatGroup(m.nhom, [])));
+}));
 
-    const membership = await ThanhVienNhom.findOne({
-      where: { nhom_id: req.params.teamId, nguoi_dung_id: uid },
-    });
-    if (!membership) return res.status(404).json({ message: 'Bạn không phải thành viên nhóm này.' });
-    if (membership.vai_tro === 'TRUONG_NHOM') {
-      return res.status(400).json({ message: 'Trưởng nhóm không thể rời nhóm. Hãy chuyển quyền trước.' });
-    }
+router.post('/', endpoint(async (req, res) => {
+  const name = text(req.body.tenNhom, 'Tên nhóm', 100, true);
+  const description = text(req.body.moTa, 'Mô tả', 10000);
+  const result = await sequelize.transaction(async transaction => {
+    const team = await Nhom.create({ ten_nhom: name, mo_ta: description, truong_nhom_id: req.auth.userId, ngay_tao: new Date() }, { transaction });
+    await ThanhVienNhom.create({ nhom_id: team.id, nguoi_dung_id: req.auth.userId, vai_tro: 'TRUONG_NHOM', ngay_tham_gia: new Date() }, { transaction });
+    await team.reload({ include: ownerInclude, transaction });
+    return formatGroup(team, await members(team.id, transaction));
+  });
+  res.status(201).location(`/api/teams/${result.id}`).json(result);
+}));
 
-    await membership.destroy();
-    return res.status(204).end();
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
-  }
-});
+router.get('/:teamId', endpoint(async (req, res) => {
+  const result = await inTeam(req, async (team, transaction) => {
+    await team.reload({ include: ownerInclude, transaction });
+    return formatGroup(team, await members(team.id, transaction));
+  });
+  res.json(result);
+}));
 
-// ── Group Tasks ──────────────────────────────────────────────
+router.put('/:teamId', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    await team.update({ ten_nhom: text(req.body.tenNhom, 'Tên nhóm', 100, true), mo_ta: text(req.body.moTa, 'Mô tả', 10000) }, { transaction });
+  }, true);
+  res.status(204).end();
+}));
 
-// GET /api/teams/:teamId/tasks
-router.get('/:teamId/tasks', async (req, res) => {
-  try {
-    const { userId } = req.query;
-    const uid = parseInt(userId, 10);
+router.delete('/:teamId', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    // Explicit deletion also supports databases created with older FK defaults.
+    await CongViecNhom.destroy({ where: { nhom_id: team.id }, transaction });
+    await ThanhVienNhom.destroy({ where: { nhom_id: team.id }, transaction });
+    await team.destroy({ transaction });
+  }, true);
+  res.status(204).end();
+}));
 
-    // Verify membership
-    const membership = await ThanhVienNhom.findOne({
-      where: { nhom_id: req.params.teamId, nguoi_dung_id: uid },
-    });
-    if (!membership) return res.status(403).json({ message: 'Bạn không phải thành viên nhóm này.' });
+// Existing /invite contract adds a registered account immediately; no email is sent.
+router.post('/:teamId/invite', endpoint(async (req, res) => {
+  const result = await inTeam(req, async (team, transaction) => {
+    const email = text(req.body.inviteEmail, 'Email', 100, true);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, 'Email không hợp lệ.');
+    const user = await NguoiDung.findOne({ where: { email, trang_thai: true }, transaction });
+    if (!user) fail(404, 'Không tìm thấy tài khoản đang hoạt động với email này.');
+    const existing = await ThanhVienNhom.findOne({ where: { nhom_id: team.id, nguoi_dung_id: user.id }, transaction });
+    if (existing) fail(409, 'Người dùng đã là thành viên nhóm.');
+    const member = await ThanhVienNhom.create({ nhom_id: team.id, nguoi_dung_id: user.id, vai_tro: 'THANH_VIEN', ngay_tham_gia: new Date() }, { transaction });
+    await member.reload({ include: memberInclude, transaction });
+    return formatMember(member);
+  }, true);
+  res.status(201).json(result);
+}));
 
-    const tasks = await CongViecNhom.findAll({
-      where: { nhom_id: req.params.teamId },
-      include: [
-        { model: NguoiDung, as: 'nguoiGiao', attributes: ['id', 'ten_dang_nhap', 'ho_ten'] },
-        { model: NguoiDung, as: 'nguoiNhan', attributes: ['id', 'ten_dang_nhap', 'ho_ten'] },
-      ],
-      order: [['ngay_tao', 'DESC']],
-    });
+router.post('/:teamId/transfer-leader', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    const newId = id(req.body.newLeaderId);
+    if (newId === req.auth.userId) fail(400, 'Không thể chuyển quyền cho chính mình.');
+    await activeMember(team.id, newId, transaction);
+    await ThanhVienNhom.update({ vai_tro: 'THANH_VIEN' }, { where: { nhom_id: team.id, nguoi_dung_id: req.auth.userId }, transaction });
+    await ThanhVienNhom.update({ vai_tro: 'TRUONG_NHOM' }, { where: { nhom_id: team.id, nguoi_dung_id: newId }, transaction });
+    await team.update({ truong_nhom_id: newId }, { transaction });
+  }, true);
+  res.json({ message: 'Chuyển trưởng nhóm thành công.' });
+}));
 
-    return res.json(tasks.map(formatGroupTask));
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
-  }
-});
+async function removeMember(team, userId, transaction) {
+  if (team.truong_nhom_id === userId) fail(400, 'Hãy chuyển quyền trưởng nhóm trước.');
+  const member = await ThanhVienNhom.findOne({ where: { nhom_id: team.id, nguoi_dung_id: userId }, transaction });
+  if (!member) fail(404, 'Thành viên không tồn tại.');
+  await CongViecNhom.update({ nguoi_nhan_id: null, ngay_cap_nhat: new Date() }, { where: { nhom_id: team.id, nguoi_nhan_id: userId }, transaction });
+  await member.destroy({ transaction });
+}
+router.delete('/:teamId/members/:memberId', endpoint(async (req, res) => {
+  await inTeam(req, (team, transaction) => removeMember(team, id(req.params.memberId), transaction), true);
+  res.status(204).end();
+}));
+router.delete('/:teamId/leave', endpoint(async (req, res) => {
+  await inTeam(req, (team, transaction) => removeMember(team, req.auth.userId, transaction));
+  res.status(204).end();
+}));
 
-// POST /api/teams/:teamId/tasks  – Giao công việc (chỉ trưởng nhóm)
-router.post('/:teamId/tasks', async (req, res) => {
-  try {
-    const { userId, tieuDe, moTa, mucDoUuTien, hanHoanThanh, nguoiNhanId, fileDinhKem } = req.body;
-    const uid = parseInt(userId, 10);
-
-    const membership = await ThanhVienNhom.findOne({
-      where: { nhom_id: req.params.teamId, nguoi_dung_id: uid },
-    });
-    if (!membership || membership.vai_tro !== 'TRUONG_NHOM') {
-      return res.status(403).json({ message: 'Chỉ trưởng nhóm mới có thể giao công việc.' });
-    }
-
-    if (!tieuDe?.trim()) return res.status(400).json({ message: 'Tiêu đề công việc là bắt buộc.' });
-
-    const now = new Date();
-    const task = await CongViecNhom.create({
-      nhom_id: parseInt(req.params.teamId, 10),
-      nguoi_giao_id: uid,
-      nguoi_nhan_id: nguoiNhanId ? parseInt(nguoiNhanId, 10) : null,
-      tieu_de: tieuDe.trim(),
-      mo_ta: moTa?.trim() || null,
-      muc_do_uu_tien: mucDoUuTien || 'TRUNG_BINH',
-      trang_thai: 'CHUA_LAM',
-      han_hoan_thanh: hanHoanThanh || null,
-      ngay_tao: now,
-      ngay_cap_nhat: now,
-      file_dinh_kem: fileDinhKem ? JSON.stringify(fileDinhKem) : null,
-    });
-
-    const full = await CongViecNhom.findByPk(task.id, {
-      include: [
-        { model: NguoiDung, as: 'nguoiGiao', attributes: ['id', 'ten_dang_nhap', 'ho_ten'] },
-        { model: NguoiDung, as: 'nguoiNhan', attributes: ['id', 'ten_dang_nhap', 'ho_ten'] },
-      ],
-    });
-
-    return res.status(201).json(formatGroupTask(full));
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
-  }
-});
-
-// PATCH /api/teams/:teamId/tasks/:taskId/status  – Cập nhật trạng thái
-router.patch('/:teamId/tasks/:taskId/status', async (req, res) => {
-  try {
-    const { userId, trangThai } = req.body;
-    const uid = parseInt(userId, 10);
-
-    const membership = await ThanhVienNhom.findOne({
-      where: { nhom_id: req.params.teamId, nguoi_dung_id: uid },
-    });
-    if (!membership) return res.status(403).json({ message: 'Bạn không phải thành viên nhóm này.' });
-
-    const VALID = ['CHUA_LAM', 'DANG_LAM', 'HOAN_THANH', 'QUA_HAN'];
-    if (!VALID.includes(trangThai)) return res.status(400).json({ message: 'Trạng thái không hợp lệ.' });
-
-    const task = await CongViecNhom.findOne({
-      where: { id: req.params.taskId, nhom_id: req.params.teamId },
-    });
-    if (!task) return res.status(404).json({ message: 'Không tìm thấy công việc.' });
-
-    task.trang_thai = trangThai;
-    task.ngay_cap_nhat = new Date();
-    await task.save();
-
-    return res.status(204).end();
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Internal server error.' });
-  }
-});
-
+router.get('/:teamId/tasks', endpoint(async (req, res) => {
+  const result = await inTeam(req, async (team, transaction) => {
+    const tasks = await CongViecNhom.findAll({ where: { nhom_id: team.id }, include: taskInclude, order: [['ngay_tao', 'DESC'], ['id', 'DESC']], transaction });
+    return tasks.map(formatGroupTask);
+  });
+  res.json(result);
+}));
+router.post('/:teamId/tasks', endpoint(async (req, res) => {
+  const result = await inTeam(req, async (team, transaction) => {
+    const values = taskValues(req.body);
+    if (values.nguoi_nhan_id != null) await activeMember(team.id, values.nguoi_nhan_id, transaction);
+    const task = await CongViecNhom.create({ ...values, nhom_id: team.id, nguoi_giao_id: req.auth.userId, trang_thai: 'CHUA_LAM', ngay_tao: new Date(), ngay_cap_nhat: new Date() }, { transaction });
+    await task.reload({ include: taskInclude, transaction });
+    return formatGroupTask(task);
+  }, true);
+  res.status(201).json(result);
+}));
+router.put('/:teamId/tasks/:taskId', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    const task = await taskInTeam(req, team, transaction);
+    const values = taskValues(req.body, true);
+    if (!Object.keys(values).length) fail(400, 'Không có trường công việc để cập nhật.');
+    if (values.nguoi_nhan_id != null) await activeMember(team.id, values.nguoi_nhan_id, transaction);
+    await task.update({ ...values, ngay_cap_nhat: new Date() }, { transaction });
+  }, true);
+  res.status(204).end();
+}));
+router.patch('/:teamId/tasks/:taskId/status', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    const task = await taskInTeam(req, team, transaction);
+    if (team.truong_nhom_id !== req.auth.userId && task.nguoi_nhan_id !== req.auth.userId) fail(403, 'Chỉ trưởng nhóm hoặc người được giao việc được cập nhật trạng thái.');
+    if (!statuses.includes(req.body.trangThai)) fail(400, 'Trạng thái không hợp lệ.');
+    await task.update({ trang_thai: req.body.trangThai, ngay_cap_nhat: new Date() }, { transaction });
+  });
+  res.status(204).end();
+}));
+router.delete('/:teamId/tasks/:taskId', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    const task = await taskInTeam(req, team, transaction);
+    await task.destroy({ transaction });
+  }, true);
+  res.status(204).end();
+}));
 module.exports = router;

@@ -2,6 +2,8 @@ const { Router } = require('express');
 const bcrypt = require('bcryptjs');
 const { NguoiDung } = require('../models');
 const { Op } = require('sequelize');
+const { createSession, requireAuth } = require('../middleware/auth');
+const { PhienDangNhap } = require('../models');
 
 const router = Router();
 
@@ -10,7 +12,9 @@ router.post('/register', async (req, res) => {
   try {
     const { username, email, password, fullName } = req.body;
 
-    if (!username?.trim() || !email?.trim() || !password?.trim())
+    if (typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string' ||
+        !username.trim() || !email.trim() || !password.trim() ||
+        (fullName != null && typeof fullName !== 'string'))
       return res.status(400).json({ message: 'Username, email and password are required.' });
 
     const trimmedUsername = username.trim();
@@ -56,7 +60,7 @@ router.post('/login', async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
 
-    if (!usernameOrEmail?.trim() || !password)
+    if (typeof usernameOrEmail !== 'string' || typeof password !== 'string' || !usernameOrEmail.trim() || !password)
       return res.status(400).json({ message: 'Invalid credentials.' });
 
     const identifier = usernameOrEmail.trim();
@@ -70,7 +74,9 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.mat_khau).catch(() => false);
     if (!valid) return res.status(401).json({ message: 'Invalid credentials.' });
 
+    const session = await createSession(user.id);
     return res.status(200).json({
+      ...session,
       id: user.id,
       username: user.ten_dang_nhap,
       email: user.email,
@@ -80,6 +86,13 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', err);
     return res.status(500).json({ message: 'Internal server error.' });
   }
+});
+
+router.post('/logout', requireAuth, async (req, res, next) => {
+  try {
+    await PhienDangNhap.destroy({ where: { token_hash: req.auth.tokenHash } });
+    res.status(204).end();
+  } catch (error) { next(error); }
 });
 
 module.exports = router;
