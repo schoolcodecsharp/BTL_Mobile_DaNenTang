@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
@@ -18,6 +19,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -29,6 +33,8 @@ app.use('/api/users/:userId/categories', require('./routes/categories'));
 app.use('/api/users/:userId/notifications', require('./routes/notifications'));
 app.use('/api/tasks/:taskId/reminders', require('./routes/reminders'));
 app.use('/api/tasks/:taskId/history', require('./routes/taskHistory'));
+app.use('/api/upload', require('./routes/upload'));
+app.use('/api/teams', require('./routes/teams'));
 
 // Start server (skip when imported for testing)
 if (require.main === module) {

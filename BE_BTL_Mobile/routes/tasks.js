@@ -20,6 +20,7 @@ function toResponse(task) {
     ngayHoanThanh: task.ngay_hoan_thanh,
     ngayTao: task.ngay_tao,
     ngayCapNhat: task.ngay_cap_nhat,
+    fileDinhKem: task.file_dinh_kem ? JSON.parse(task.file_dinh_kem) : [],
     danhMuc: task.danhMuc ? {
       id: task.danhMuc.id,
       nguoiDungId: task.danhMuc.nguoi_dung_id,
@@ -61,7 +62,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/users/:userId/tasks
 router.post('/', async (req, res) => {
   try {
-    const { title, description, priority, status, categoryId, startDate, dueDate } = req.body;
+    const { title, description, priority, status, categoryId, startDate, dueDate, attachments } = req.body;
     const userId = parseInt(req.params.userId, 10);
 
     if (!title?.trim()) return res.status(400).json({ errors: { Title: ['The Title field is required.'] } });
@@ -91,6 +92,8 @@ router.post('/', async (req, res) => {
       ngay_hoan_thanh: status === 'HOAN_THANH' ? now : null,
       ngay_tao: now,
       ngay_cap_nhat: now,
+      file_dinh_kem: attachments && Array.isArray(attachments) && attachments.length > 0
+        ? JSON.stringify(attachments) : null,
     });
 
     return res.status(201)

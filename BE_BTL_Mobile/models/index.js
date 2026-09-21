@@ -47,6 +47,7 @@ const CongViec = sequelize.define('CongViec', {
   ngay_hoan_thanh: { type: DataTypes.DATE },
   ngay_tao: { type: DataTypes.DATE },
   ngay_cap_nhat: { type: DataTypes.DATE },
+  file_dinh_kem: { type: DataTypes.TEXT, defaultValue: null }, // JSON array of attachment URLs
 }, { tableName: 'cong_viec', timestamps: false });
 
 // ── NhacNho ─────────────────────────────────────────────────
@@ -78,6 +79,40 @@ const LichSuCongViec = sequelize.define('LichSuCongViec', {
   thoi_gian_thay_doi: { type: DataTypes.DATE },
 }, { tableName: 'lich_su_cong_viec', timestamps: false });
 
+// ── Nhom (Groups) ───────────────────────────────────────────
+const Nhom = sequelize.define('Nhom', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  ten_nhom: { type: DataTypes.STRING(100), allowNull: false },
+  mo_ta: { type: DataTypes.TEXT },
+  truong_nhom_id: { type: DataTypes.INTEGER, allowNull: false },
+  ngay_tao: { type: DataTypes.DATE },
+}, { tableName: 'nhom', timestamps: false });
+
+// ── ThanhVienNhom (Group Members) ───────────────────────────
+const ThanhVienNhom = sequelize.define('ThanhVienNhom', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nhom_id: { type: DataTypes.INTEGER, allowNull: false },
+  nguoi_dung_id: { type: DataTypes.INTEGER, allowNull: false },
+  vai_tro: { type: DataTypes.ENUM('TRUONG_NHOM', 'THANH_VIEN'), defaultValue: 'THANH_VIEN' },
+  ngay_tham_gia: { type: DataTypes.DATE },
+}, { tableName: 'thanh_vien_nhom', timestamps: false });
+
+// ── CongViecNhom (Group Tasks) ──────────────────────────────
+const CongViecNhom = sequelize.define('CongViecNhom', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nhom_id: { type: DataTypes.INTEGER, allowNull: false },
+  nguoi_giao_id: { type: DataTypes.INTEGER, allowNull: false },
+  nguoi_nhan_id: { type: DataTypes.INTEGER },
+  tieu_de: { type: DataTypes.STRING(200), allowNull: false },
+  mo_ta: { type: DataTypes.TEXT },
+  muc_do_uu_tien: { type: DataTypes.STRING(20), defaultValue: 'TRUNG_BINH' },
+  trang_thai: { type: DataTypes.STRING(20), defaultValue: 'CHUA_LAM' },
+  han_hoan_thanh: { type: DataTypes.DATE },
+  ngay_tao: { type: DataTypes.DATE },
+  ngay_cap_nhat: { type: DataTypes.DATE },
+  file_dinh_kem: { type: DataTypes.TEXT, defaultValue: null },
+}, { tableName: 'cong_viec_nhom', timestamps: false });
+
 // ── Associations ────────────────────────────────────────────
 NguoiDung.hasMany(DanhMuc, { foreignKey: 'nguoi_dung_id', as: 'danhMucs' });
 DanhMuc.belongsTo(NguoiDung, { foreignKey: 'nguoi_dung_id', as: 'nguoiDung' });
@@ -99,6 +134,25 @@ ThongBao.belongsTo(CongViec, { foreignKey: 'cong_viec_id', as: 'congViec' });
 CongViec.hasMany(LichSuCongViec, { foreignKey: 'cong_viec_id', as: 'lichSus' });
 LichSuCongViec.belongsTo(CongViec, { foreignKey: 'cong_viec_id', as: 'congViec' });
 
+// Group associations
+Nhom.hasMany(ThanhVienNhom, { foreignKey: 'nhom_id', as: 'thanhViens' });
+ThanhVienNhom.belongsTo(Nhom, { foreignKey: 'nhom_id', as: 'nhom' });
+
+NguoiDung.hasMany(ThanhVienNhom, { foreignKey: 'nguoi_dung_id', as: 'nhomThamGia' });
+ThanhVienNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_dung_id', as: 'nguoiDung' });
+
+Nhom.belongsTo(NguoiDung, { foreignKey: 'truong_nhom_id', as: 'truongNhom' });
+NguoiDung.hasMany(Nhom, { foreignKey: 'truong_nhom_id', as: 'nhomLanh' });
+
+Nhom.hasMany(CongViecNhom, { foreignKey: 'nhom_id', as: 'congViecs' });
+CongViecNhom.belongsTo(Nhom, { foreignKey: 'nhom_id', as: 'nhom' });
+
+NguoiDung.hasMany(CongViecNhom, { foreignKey: 'nguoi_giao_id', as: 'congViecsGiao' });
+CongViecNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_giao_id', as: 'nguoiGiao' });
+
+NguoiDung.hasMany(CongViecNhom, { foreignKey: 'nguoi_nhan_id', as: 'congViecsNhan' });
+CongViecNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_nhan_id', as: 'nguoiNhan' });
+
 module.exports = {
   sequelize,
   NguoiDung,
@@ -107,4 +161,7 @@ module.exports = {
   NhacNho,
   ThongBao,
   LichSuCongViec,
+  Nhom,
+  ThanhVienNhom,
+  CongViecNhom,
 };
