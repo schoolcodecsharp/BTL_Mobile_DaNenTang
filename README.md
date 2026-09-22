@@ -31,9 +31,49 @@ cd BE_BTL_Mobile
 # PORT=5257
 
 npm install
+npm run db:create # Chỉ cần khi database chưa tồn tại
+npm run db:migrate
 npm run dev     # Development (nodemon)
 npm start       # Production
 ```
+
+### Đồng bộ CSDL khi làm việc nhóm
+
+Sau khi pull code, chạy trong thư mục backend:
+
+```powershell
+git pull
+cd BE_BTL_Mobile
+npm ci
+npm run db:migrate
+npm run db:status
+```
+
+Nếu đã đứng trong thư mục backend thì bỏ bước cd. Mỗi thành viên tự cấu hình
+`.env` theo MySQL của mình. Không chia sẻ mật khẩu qua Git.
+Migration đồng bộ **cấu trúc database**, không sao chép dữ liệu cá nhân giữa các máy.
+Git pull không tự chạy migration. Bảng `SequelizeMeta` ghi lại các file đã áp dụng.
+
+Khi thay đổi bảng/cột/index/khóa ngoại:
+
+1. Tạo file: `npm run db:migration:create -- --name add-example-column`.
+2. Viết thao tác trong `up` và thao tác hoàn tác trong `down`, cập nhật model tương ứng.
+3. Kiểm tra trên database thử nghiệm, chạy migrate lần hai để xác nhận không chạy lặp.
+4. Commit cả migration, model và lockfile (nếu dependency thay đổi). Không sửa migration đã chia sẻ.
+
+Các migration khởi đầu tiếp nhận 9 bảng hiện tại, tạo bảng còn thiếu, bổ sung
+`cong_viec.file_dinh_kem` và ràng buộc thành viên nhóm không trùng.
+Baseline kiểm tra tên cột của bảng có sẵn; không tự sửa kiểu cột, khóa ngoại hoặc
+dữ liệu cũ khác biệt. Nếu báo thiếu cột hoặc trùng thành viên, cần đối chiếu và xử lý
+bằng migration chuyển đổi riêng trước khi tiếp tục. Sao lưu database hiện có trước lần đầu.
+
+MySQL có thể commit từng thao tác DDL: nếu lỗi giữa chừng, kiểm tra schema trước khi chạy lại.
+Ba migration khởi đầu cố ý chặn rollback vì có thể tiếp nhận cấu trúc/dữ liệu đã tồn tại.
+Migration mới có thể dùng `npm run db:undo` nếu đã viết `down` an toàn.
+Không dùng `sync({ alter: true })`, `sync({ force: true })` hoặc script SQL thủ công
+để đồng bộ schema. `migrate.sql` chỉ giữ làm tài liệu lịch sử.
+
+Tài liệu: [Sequelize migrations](https://sequelize.org/docs/v6/other-topics/migrations/).
 
 ### API Endpoints
 

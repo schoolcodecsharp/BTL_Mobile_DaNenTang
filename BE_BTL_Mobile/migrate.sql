@@ -1,5 +1,6 @@
 -- ============================================================
--- Script tạo bảng mới cho tính năng nhóm và upload file
+-- LEGACY: Không chạy file này để đồng bộ nữa. Dùng npm run db:migrate.
+-- Script lịch sử tạo bảng mới cho tính năng nhóm và upload file
 -- Chạy script này trong MySQL Workbench hoặc terminal MySQL
 -- ============================================================
 
