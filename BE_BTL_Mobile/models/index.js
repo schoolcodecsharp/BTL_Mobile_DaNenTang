@@ -95,7 +95,17 @@ const ThanhVienNhom = sequelize.define('ThanhVienNhom', {
   nguoi_dung_id: { type: DataTypes.INTEGER, allowNull: false },
   vai_tro: { type: DataTypes.ENUM('TRUONG_NHOM', 'THANH_VIEN'), defaultValue: 'THANH_VIEN' },
   ngay_tham_gia: { type: DataTypes.DATE },
-}, { tableName: 'thanh_vien_nhom', timestamps: false });
+}, { tableName: 'thanh_vien_nhom', timestamps: false,
+  indexes: [{ name: 'uq_nhom_nd', unique: true, fields: ['nhom_id', 'nguoi_dung_id'] }],
+});
+
+// Only the SHA-256 digest is stored; the bearer token is returned once at login.
+const PhienDangNhap = sequelize.define('PhienDangNhap', {
+  token_hash: { type: DataTypes.STRING(64), primaryKey: true },
+  nguoi_dung_id: { type: DataTypes.INTEGER, allowNull: false },
+  het_han: { type: DataTypes.DATE, allowNull: false },
+}, { tableName: 'phien_dang_nhap', timestamps: false });
+PhienDangNhap.belongsTo(NguoiDung, { foreignKey: 'nguoi_dung_id', onDelete: 'CASCADE' });
 
 // ── CongViecNhom (Group Tasks) ──────────────────────────────
 const CongViecNhom = sequelize.define('CongViecNhom', {
@@ -164,4 +174,5 @@ module.exports = {
   Nhom,
   ThanhVienNhom,
   CongViecNhom,
+  PhienDangNhap,
 };

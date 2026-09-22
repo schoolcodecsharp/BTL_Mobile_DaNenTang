@@ -15,7 +15,7 @@ app.use(cors({
     ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
     : ['http://localhost:8081', 'http://127.0.0.1:8081'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
 }));
 app.use(express.json());
 
@@ -35,6 +35,13 @@ app.use('/api/tasks/:taskId/reminders', require('./routes/reminders'));
 app.use('/api/tasks/:taskId/history', require('./routes/taskHistory'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/teams', require('./routes/teams'));
+
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error.type === 'entity.parse.failed') return res.status(400).json({ message: 'JSON không hợp lệ.' });
+  console.error(error);
+  res.status(500).json({ message: 'Internal server error.' });
+});
 
 // Start server (skip when imported for testing)
 if (require.main === module) {
