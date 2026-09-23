@@ -434,4 +434,4 @@ const options = {
   apis: [],
 };
 
-module.exports = swaggerJsdoc(options);
+module.exports = require('./swagger-teams')(swaggerJsdoc(options));
