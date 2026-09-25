@@ -19,13 +19,16 @@ function createTestApp() {
 
 function request(server, method, path, body) {
   return new Promise((resolve, reject) => {
+    const payload = body === undefined ? null : JSON.stringify(body);
     const addr = server.address();
     const options = {
       hostname: '127.0.0.1',
       port: addr.port,
       path,
       method,
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json',
+        ...(payload === null ? {} : { 'Content-Length': Buffer.byteLength(payload) }),
+      },
     };
     const req = http.request(options, (res) => {
       let data = '';
@@ -37,7 +40,7 @@ function request(server, method, path, body) {
       });
     });
     req.on('error', reject);
-    if (body) req.write(JSON.stringify(body));
+    if (payload !== null) req.write(payload);
     req.end();
   });
 }
@@ -142,4 +145,32 @@ test('server.js exports express app', () => {
   const app = require('../server');
   assert.equal(typeof app.listen, 'function');
   assert.equal(typeof app.use, 'function');
+});
+
+test('production team endpoints require authentication and are documented', async () => {
+  const app = require('../server');
+  const spec = require('../swagger');
+  const server = http.createServer(app);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    for (const [method, path] of [
+      ['GET', '/api/teams'], ['POST', '/api/teams'], ['GET', '/api/teams/1'],
+      ['PUT', '/api/teams/1'], ['DELETE', '/api/teams/1'],
+      ['POST', '/api/teams/1/invite'], ['POST', '/api/teams/1/transfer-leader'],
+      ['DELETE', '/api/teams/1/members/2'], ['DELETE', '/api/teams/1/leave'],
+      ['GET', '/api/teams/1/tasks'], ['POST', '/api/teams/1/tasks'],
+      ['PUT', '/api/teams/1/tasks/1'], ['DELETE', '/api/teams/1/tasks/1'],
+      ['PATCH', '/api/teams/1/tasks/1/status'], ['POST', '/api/auth/logout'],
+    ]) {
+      assert.equal((await request(server, method, path, {})).status, 401, `${method} ${path}`);
+    }
+    assert.equal(spec.components.securitySchemes.bearerAuth.scheme, 'bearer');
+    for (const [path, operations] of Object.entries(spec.paths)) {
+      if (!path.startsWith('/api/teams')) continue;
+      for (const operation of Object.values(operations)) {
+        assert.deepEqual(operation.security, [{ bearerAuth: [] }]);
+        assert.ok(operation.responses[401]);
+      }
+    }
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });
