@@ -71,6 +71,6 @@ npm run web                          # hoặc npm start cho mobile
 
 ## Lưu ý
 
-- Backend hiện chưa có JWT/session token. Đăng nhập trả về thông tin user nhưng chưa bảo vệ API bằng token.
+- API nhóm yêu cầu Bearer token trả về khi đăng nhập. Chạy `npm run migrate:groups` trong backend trước khi dùng. Xem [API nhóm và hướng dẫn test](BE_BTL_Mobile/GROUPS_API.md). Các API cá nhân cũ chưa được bảo vệ bằng token.
 - Home/Explore tabs trên frontend hiện là template mẫu.
 - CORS mặc định cho phép `localhost:8081`. Sửa `CORS_ORIGINS` trong `.env` nếu cần.
