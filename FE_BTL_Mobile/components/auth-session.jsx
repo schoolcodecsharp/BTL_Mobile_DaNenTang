@@ -1,10 +1,25 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
+import { setApiToken } from '@/lib/api';
+
 const AuthSessionContext = createContext(null);
 
 export function AuthSessionProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const value = useMemo(() => ({ user, signIn: setUser, signOut: () => setUser(null) }), [user]);
+  const [session, setSession] = useState(null); // { user, token }
+
+  const value = useMemo(() => ({
+    user: session?.user ?? null,
+    token: session?.token ?? null,
+    signIn: (userData) => {
+      const token = userData.accessToken ?? null;
+      setApiToken(token);
+      setSession({ user: userData, token });
+    },
+    signOut: () => {
+      setApiToken(null);
+      setSession(null);
+    },
+  }), [session]);
 
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
 }

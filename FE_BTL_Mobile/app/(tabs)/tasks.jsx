@@ -53,6 +53,7 @@ const EMPTY_FORM = {
   priority: 'TRUNG_BINH',
   status: 'CHUA_LAM',
   dueDate: '',
+  categoryId: null,
   attachments: [],
 };
 
@@ -112,6 +113,7 @@ export default function TasksScreen() {
       priority: task.mucDoUuTien ?? 'TRUNG_BINH',
       status: task.trangThai ?? 'CHUA_LAM',
       dueDate: task.hanHoanThanh ? new Date(task.hanHoanThanh).toISOString().slice(0, 10) : '',
+      categoryId: task.danhMucId ?? null,
       attachments: task.fileDinhKem ?? [],
     });
     setFormError('');
@@ -137,6 +139,7 @@ export default function TasksScreen() {
         priority: form.priority,
         status: form.status,
         dueDate: form.dueDate || undefined,
+        categoryId: form.categoryId ?? undefined,
         attachments: form.attachments.length > 0 ? form.attachments : undefined,
       };
       if (editingTask) {

@@ -12,6 +12,13 @@ export class ApiError extends Error {
   }
 }
 
+// Token store — set by AuthSessionProvider via setApiToken()
+let _authToken = null;
+
+export function setApiToken(token) {
+  _authToken = token ?? null;
+}
+
 function getBaseUrl() {
   const url = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
   if (!url) throw new ApiError('Chưa cấu hình EXPO_PUBLIC_API_URL trong .env.local.');
@@ -35,14 +42,21 @@ export async function apiFetch(path, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(options.headers ?? {}),
+  };
+
+  // Attach Bearer token if available
+  if (_authToken) {
+    headers['Authorization'] = `Bearer ${_authToken}`;
+  }
+
   try {
     const res = await fetch(`${baseUrl}${path}`, {
       method: options.method ?? 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...(options.headers ?? {}),
-      },
+      headers,
       body: options.body != null ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
     });
@@ -79,10 +93,15 @@ export async function apiUpload(files) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
 
+  const headers = { Accept: 'application/json' };
+  if (_authToken) {
+    headers['Authorization'] = `Bearer ${_authToken}`;
+  }
+
   try {
     const res = await fetch(`${baseUrl}/api/upload`, {
       method: 'POST',
-      headers: { Accept: 'application/json' },
+      headers,
       body: form,
       signal: controller.signal,
     });

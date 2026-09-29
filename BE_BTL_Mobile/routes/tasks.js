@@ -108,7 +108,7 @@ router.post('/', async (req, res) => {
 // PUT /api/users/:userId/tasks/:id
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, priority, status, categoryId, startDate, dueDate } = req.body;
+    const { title, description, priority, status, categoryId, startDate, dueDate, attachments } = req.body;
     const userId = parseInt(req.params.userId, 10);
 
     const task = await CongViec.findOne({ where: { id: req.params.id, nguoi_dung_id: userId } });
@@ -136,6 +136,10 @@ router.put('/:id', async (req, res) => {
     task.han_hoan_thanh = dueDate || null;
     task.ngay_hoan_thanh = status === 'HOAN_THANH' ? (task.ngay_hoan_thanh || new Date()) : null;
     task.ngay_cap_nhat = new Date();
+    if (attachments !== undefined) {
+      task.file_dinh_kem = Array.isArray(attachments) && attachments.length > 0
+        ? JSON.stringify(attachments) : null;
+    }
     await task.save();
 
     return res.status(204).end();
