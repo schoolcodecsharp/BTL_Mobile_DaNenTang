@@ -20,9 +20,16 @@ async function requireAuth(req, res, next) {
     }
     const user = await NguoiDung.findByPk(session.nguoi_dung_id);
     if (!user || !user.trang_thai) return res.status(401).json({ message: 'Tài khoản không khả dụng.' });
-    req.auth = { userId: user.id, tokenHash: session.token_hash };
+    req.auth = { userId: user.id, tokenHash: session.token_hash, role: user.vai_tro };
     next();
   } catch (error) { next(error); }
 }
 
-module.exports = { createSession, requireAuth };
+function requireAdmin(req, res, next) {
+  if (req.auth?.role !== 'ADMIN') {
+    return res.status(403).json({ message: 'Chỉ quản trị viên được truy cập trang này.' });
+  }
+  next();
+}
+
+module.exports = { createSession, requireAuth, requireAdmin };
