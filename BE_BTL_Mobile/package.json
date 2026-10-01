@@ -10,6 +10,8 @@
     "test:integration": "node --test tests/integration/*.test.js",
     "migrate:groups": "node scripts/migrate-groups.js",
     "db:create": "sequelize-cli db:create",
+    "admin:grant": "node scripts/grant-admin.js",
+    "test:admin": "node --test tests/integration/admin.test.js",
     "db:check": "node scripts/check-migrations.js",
     "db:migrate": "node scripts/run-migrations.js db:migrate",
     "db:status": "node scripts/run-migrations.js db:migrate:status",
