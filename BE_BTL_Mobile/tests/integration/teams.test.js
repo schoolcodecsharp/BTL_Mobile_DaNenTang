@@ -4,6 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { randomBytes } = require('node:crypto');
 const mysql = require('mysql2/promise');
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
 
 test('Teams API with real MySQL', { timeout: 120000 }, async t => {
   const database = `todo_groups_test_${randomBytes(8).toString('hex')}`;
@@ -19,9 +21,14 @@ test('Teams API with real MySQL', { timeout: 120000 }, async t => {
     process.env.DB_NAME = database;
     models = require('../../models');
     const { sequelize, NguoiDung, Nhom, ThanhVienNhom, CongViecNhom, PhienDangNhap } = models;
-    await NguoiDung.sync();
-    const { migrateGroups } = require('../../migrations/groups');
-    await migrateGroups();
+    function migrateGroups() {
+    const migration = spawnSync(process.execPath,
+      [path.resolve(__dirname, '../../scripts/run-migrations.js'), 'db:migrate'],
+      { cwd: path.resolve(__dirname, '../..'), encoding: 'utf8',
+        env: { ...process.env, NODE_ENV: 'development', DB_NAME: database } });
+    assert.equal(migration.status, 0, migration.stderr || migration.stdout);
+    }
+    migrateGroups();
     const app = require('../../server');
     server = await new Promise(resolve => {
       const listening = app.listen(0, '127.0.0.1', () => resolve(listening));

@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { sequelize, Nhom, ThanhVienNhom, NguoiDung, CongViecNhom } = require('../models');
+const { sequelize, Nhom, ThanhVienNhom, NguoiDung, CongViecNhom, ThongBao } = require('../models');
 const { requireAuth } = require('../middleware/auth');
 const router = Router();
 
@@ -268,6 +268,38 @@ router.post('/:teamId/tasks', endpoint(async (req, res) => {
     if (values.nguoi_nhan_id != null) await activeMember(team.id, values.nguoi_nhan_id, transaction);
     const task = await CongViecNhom.create({ ...values, nhom_id: team.id, nguoi_giao_id: req.auth.userId, trang_thai: 'CHUA_LAM', ngay_tao: new Date(), ngay_cap_nhat: new Date() }, { transaction });
     await task.reload({ include: taskInclude, transaction });
+
+    // Tự động tạo thông báo khi có việc mới được giao
+    const notifyUserIds = [];
+    if (values.nguoi_nhan_id) {
+      if (values.nguoi_nhan_id !== req.auth.userId) {
+        notifyUserIds.push(values.nguoi_nhan_id);
+      }
+    } else {
+      const allMembers = await ThanhVienNhom.findAll({ where: { nhom_id: team.id }, transaction });
+      for (const m of allMembers) {
+        if (m.nguoi_dung_id !== req.auth.userId) {
+          notifyUserIds.push(m.nguoi_dung_id);
+        }
+      }
+    }
+
+    const notifTitle = values.nguoi_nhan_id
+      ? `Bạn được giao công việc mới trong nhóm "${team.ten_nhom}"`
+      : `Công việc chung mới trong nhóm "${team.ten_nhom}"`;
+    const notifContent = `Công việc: "${task.tieu_de}"`;
+
+    for (const uid of notifyUserIds) {
+      await ThongBao.create({
+        nguoi_dung_id: uid,
+        cong_viec_id: null,
+        tieu_de: notifTitle,
+        noi_dung: notifContent,
+        da_doc: false,
+        ngay_tao: new Date(),
+      }, { transaction });
+    }
+
     return formatGroupTask(task);
   }, true);
   res.status(201).json(result);
@@ -288,6 +320,23 @@ router.patch('/:teamId/tasks/:taskId/status', endpoint(async (req, res) => {
     if (team.truong_nhom_id !== req.auth.userId && task.nguoi_nhan_id !== req.auth.userId) fail(403, 'Chỉ trưởng nhóm hoặc người được giao việc được cập nhật trạng thái.');
     if (!statuses.includes(req.body.trangThai)) fail(400, 'Trạng thái không hợp lệ.');
     await task.update({ trang_thai: req.body.trangThai, ngay_cap_nhat: new Date() }, { transaction });
+
+    // Tạo thông báo khi công việc nhóm hoàn thành
+    if (req.body.trangThai === 'HOAN_THANH') {
+      const recipientId = req.auth.userId === team.truong_nhom_id
+        ? (task.nguoi_nhan_id && task.nguoi_nhan_id !== team.truong_nhom_id ? task.nguoi_nhan_id : null)
+        : team.truong_nhom_id;
+      if (recipientId) {
+        await ThongBao.create({
+          nguoi_dung_id: recipientId,
+          cong_viec_id: null,
+          tieu_de: `Công việc đã hoàn thành: "${task.tieu_de}"`,
+          noi_dung: `Công việc trong nhóm "${team.ten_nhom}" đã được đánh dấu hoàn thành.`,
+          da_doc: false,
+          ngay_tao: new Date(),
+        }, { transaction });
+      }
+    }
   });
   res.status(204).end();
 }));
