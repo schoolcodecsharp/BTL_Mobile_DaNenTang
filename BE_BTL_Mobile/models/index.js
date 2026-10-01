@@ -22,6 +22,7 @@ const NguoiDung = sequelize.define('NguoiDung', {
   anh_dai_dien: { type: DataTypes.STRING(255) },
   ngay_tao: { type: DataTypes.DATE },
   trang_thai: { type: DataTypes.BOOLEAN, defaultValue: true },
+  vai_tro: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'USER' },
 }, { tableName: 'nguoi_dung', timestamps: false });
 
 // ── DanhMuc ─────────────────────────────────────────────────
