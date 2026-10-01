@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { AuthSessionProvider } from '@/components/auth-session';
+import { TaskReminderProvider } from '@/components/task-reminder-provider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -15,6 +16,7 @@ export default function RootLayout() {
 
   return (
     <AuthSessionProvider>
+      <TaskReminderProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -23,6 +25,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
+      </TaskReminderProvider>
     </AuthSessionProvider>
   );
 }
