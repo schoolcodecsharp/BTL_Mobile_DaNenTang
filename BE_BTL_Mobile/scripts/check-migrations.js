@@ -12,7 +12,7 @@ let created = false;
 
 function migrate() {
   const result = spawnSync(process.execPath,
-    [require.resolve('sequelize-cli/lib/sequelize'), 'db:migrate'],
+    [path.resolve(__dirname, 'run-migrations.js'), 'db:migrate'],
     { cwd: path.resolve(__dirname, '..'), encoding: 'utf8',
       env: { ...process.env, NODE_ENV: 'development', DB_NAME: name } });
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -24,10 +24,10 @@ async function main() {
     created = true;
     migrate();
     const qi = db.getQueryInterface();
-    assert.equal((await qi.showAllTables()).length, 10);
+    assert.equal((await qi.showAllTables()).length, 11);
     assert.ok((await qi.describeTable('cong_viec')).file_dinh_kem);
     const [before] = await db.query('SELECT name FROM SequelizeMeta ORDER BY name');
-    assert.equal(before.length, 3);
+    assert.equal(before.length, 4);
     migrate();
     const [after] = await db.query('SELECT name FROM SequelizeMeta ORDER BY name');
     assert.deepEqual(after, before);

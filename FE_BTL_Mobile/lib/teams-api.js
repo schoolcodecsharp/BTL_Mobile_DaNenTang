@@ -91,3 +91,23 @@ export async function createGroupTask(teamId, payload) {
 export async function updateGroupTaskStatus(teamId, taskId, payload) {
   return apiFetch(`/api/teams/${teamId}/tasks/${taskId}/status`, { method: 'PATCH', body: payload });
 }
+
+/**
+ * Chỉnh sửa toàn bộ thông tin công việc nhóm (chỉ trưởng nhóm).
+ * @param {number} teamId
+ * @param {number} taskId
+ * @param {object} payload
+ */
+export async function updateGroupTask(teamId, taskId, payload) {
+  return apiFetch(`/api/teams/${teamId}/tasks/${taskId}`, { method: 'PUT', body: payload });
+}
+
+/**
+ * Xóa công việc nhóm (chỉ trưởng nhóm).
+ * @param {number} teamId
+ * @param {number} taskId
+ * @param {{ userId: number }} payload
+ */
+export async function deleteGroupTask(teamId, taskId, payload) {
+  return apiFetch(`/api/teams/${teamId}/tasks/${taskId}`, { method: 'DELETE', body: payload });
+}

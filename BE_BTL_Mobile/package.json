@@ -11,9 +11,9 @@
     "migrate:groups": "node scripts/migrate-groups.js",
     "db:create": "sequelize-cli db:create",
     "db:check": "node scripts/check-migrations.js",
-    "db:migrate": "sequelize-cli db:migrate",
-    "db:status": "sequelize-cli db:migrate:status",
-    "db:undo": "sequelize-cli db:migrate:undo",
+    "db:migrate": "node scripts/run-migrations.js db:migrate",
+    "db:status": "node scripts/run-migrations.js db:migrate:status",
+    "db:undo": "node scripts/run-migrations.js db:migrate:undo",
     "db:migration:create": "sequelize-cli migration:generate"
   },
   "dependencies": {
