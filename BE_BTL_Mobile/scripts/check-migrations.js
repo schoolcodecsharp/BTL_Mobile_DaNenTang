@@ -34,7 +34,8 @@ async function main() {
     assert.ok((await qi.describeTable('cong_viec')).lap_lai);
     assert.ok((await qi.describeTable('cong_viec')).da_tao_lan_tiep);
     const [before] = await db.query('SELECT name FROM SequelizeMeta ORDER BY name');
-    assert.equal(before.length, 7);
+    assert.equal(before.length, 8);
+    assert.equal((await qi.describeTable('nguoi_dung')).vai_tro.defaultValue, 'USER');
     migrate();
     const [after] = await db.query('SELECT name FROM SequelizeMeta ORDER BY name');
     assert.deepEqual(after, before);
@@ -45,6 +46,8 @@ async function main() {
     migrate();
     const [rows] = await db.query('SELECT ten_dang_nhap FROM nguoi_dung');
     assert.equal(rows[0].ten_dang_nhap, 'migration_check');
+    const [roles] = await db.query('SELECT vai_tro FROM nguoi_dung');
+    assert.equal(roles[0].vai_tro, 'USER');
     assert.ok((await qi.describeTable('cong_viec')).file_dinh_kem);
     console.log('PASS: fresh database, repeat run, legacy adoption and data preservation.');
   } finally {
