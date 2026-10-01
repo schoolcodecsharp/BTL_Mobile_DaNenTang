@@ -1,10 +1,13 @@
+import { useFocusEffect } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -21,6 +24,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   createGroupTask,
   createTeam,
+  deleteGroupTask,
   getGroupTasks,
   getTeamDetail,
   getTeams,
@@ -28,6 +32,7 @@ import {
   leaveTeam,
   removeMember,
   transferLeader,
+  updateGroupTask,
   updateGroupTaskStatus,
 } from '@/lib/teams-api';
 
@@ -74,7 +79,7 @@ export default function TeamsScreen() {
 
   const fetchTeams = useCallback(async (isRefresh = false) => {
     if (!user?.id) return;
-    isRefresh ? setRefreshing(true) : setLoading(true);
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     setError('');
     try {
       const data = await getTeams(user.id);
@@ -85,9 +90,9 @@ export default function TeamsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
-  useEffect(() => { fetchTeams(); }, [fetchTeams]);
+  useFocusEffect(useCallback(() => { void fetchTeams(); }, [fetchTeams]));
 
   async function openTeamDetail(teamId) {
     try {
@@ -206,8 +211,37 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [viewingTask, setViewingTask] = useState(null);
+  const [taskFilter, setTaskFilter] = useState('all'); // all | my | doing | done
   const [activeTab, setActiveTab] = useState('members'); // members | tasks
   const [refreshing, setRefreshing] = useState(false);
+
+  const myTasksCount = useMemo(() => {
+    return (tasks ?? []).filter((t) => t.nguoiNhanId === user?.id || t.nguoiNhanId === null).length;
+  }, [tasks, user?.id]);
+
+  const doingTasksCount = useMemo(() => {
+    return (tasks ?? []).filter((t) => t.trangThai === 'DANG_LAM' || t.trangThai === 'CHUA_LAM').length;
+  }, [tasks]);
+
+  const doneTasksCount = useMemo(() => {
+    return (tasks ?? []).filter((t) => t.trangThai === 'HOAN_THANH').length;
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    const list = tasks ?? [];
+    if (taskFilter === 'my') {
+      return list.filter((t) => t.nguoiNhanId === user?.id || t.nguoiNhanId === null);
+    }
+    if (taskFilter === 'doing') {
+      return list.filter((t) => t.trangThai === 'DANG_LAM' || t.trangThai === 'CHUA_LAM');
+    }
+    if (taskFilter === 'done') {
+      return list.filter((t) => t.trangThai === 'HOAN_THANH');
+    }
+    return list;
+  }, [tasks, taskFilter, user?.id]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -238,6 +272,36 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
             await leaveTeam(detail.id, user.id);
             onBack();
           } catch (err) { Alert.alert('Lỗi', err.message); }
+        },
+      },
+    ]);
+  }
+
+  function handleOpenCreateTask() {
+    setEditingTask(null);
+    setShowTaskModal(true);
+  }
+
+  function handleOpenEditTask(task) {
+    setEditingTask(task);
+    if (viewingTask?.id === task.id) setViewingTask(null);
+    setShowTaskModal(true);
+  }
+
+  async function handleDeleteTask(task) {
+    Alert.alert('Xóa công việc', `Bạn có chắc muốn xóa công việc "${task.tieuDe}"?`, [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Xóa',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteGroupTask(detail.id, task.id, { userId: user.id });
+            if (viewingTask?.id === task.id) setViewingTask(null);
+            await onRefresh();
+          } catch (err) {
+            Alert.alert('Lỗi', err.message);
+          }
         },
       },
     ]);
@@ -343,28 +407,92 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
         {/* TASKS TAB */}
         {activeTab === 'tasks' && (
           <View>
-            {(tasks ?? []).length === 0 ? (
+            {/* Quick Filter Bar */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
+              {[
+                { key: 'all', label: 'Tất cả', count: (tasks ?? []).length },
+                { key: 'my', label: 'Việc của tôi', count: myTasksCount },
+                { key: 'doing', label: 'Đang làm', count: doingTasksCount },
+                { key: 'done', label: 'Đã xong', count: doneTasksCount },
+              ].map((item) => {
+                const isActive = taskFilter === item.key;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    onPress={() => setTaskFilter(item.key)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: isActive ? theme.primary : theme.surface,
+                        borderColor: isActive ? theme.primary : theme.border,
+                      },
+                    ]}>
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        { color: isActive ? '#FFFFFF' : theme.text },
+                      ]}>
+                      {item.label} ({item.count})
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {filteredTasks.length === 0 ? (
               <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                 <Ionicons name="clipboard-outline" size={38} color={theme.muted} />
-                <Text style={[styles.emptyTitle, { color: theme.text }]}>Chưa có công việc nào</Text>
-                {isLeader && <Text style={[styles.emptyText, { color: theme.muted }]}>Nhấn "Giao công việc" để bắt đầu.</Text>}
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>Không có công việc nào</Text>
+                <Text style={[styles.emptyText, { color: theme.muted }]}>
+                  {taskFilter === 'all'
+                    ? (isLeader ? 'Nhấn "Giao công việc" để bắt đầu.' : 'Nhóm chưa có công việc nào.')
+                    : 'Không có công việc phù hợp với bộ lọc hiện tại.'}
+                </Text>
               </View>
             ) : (
-              tasks.map((task) => {
+              filteredTasks.map((task) => {
                 const color = STATUS_COLORS[task.trangThai] ?? '#6366F1';
                 const isAssignedToMe = task.nguoiNhanId === user?.id;
                 return (
-                  <View key={task.id} style={[styles.groupTaskCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <TouchableOpacity
+                    key={task.id}
+                    activeOpacity={0.8}
+                    onPress={() => setViewingTask(task)}
+                    style={[styles.groupTaskCard, { backgroundColor: isDark ? `${color}18` : `${color}0D`, borderColor: `${color}55` }]}>
                     <View style={[styles.statusBar2, { backgroundColor: color }]} />
                     <View style={styles.taskBody}>
                       <View style={styles.taskTopRow}>
                         <Text numberOfLines={1} style={[styles.taskTitle, { color: theme.text }]}>{task.tieuDe}</Text>
-                        <View style={[styles.statusBadge, { backgroundColor: `${color}18` }]}>
-                          <Text style={[styles.statusText, { color }]}>{STATUS_LABELS[task.trangThai] ?? task.trangThai}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={[styles.statusBadge, { backgroundColor: `${color}18` }]}>
+                            <Text style={[styles.statusText, { color }]}>{STATUS_LABELS[task.trangThai] ?? task.trangThai}</Text>
+                          </View>
+                          {isLeader && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <TouchableOpacity
+                                onPress={() => handleOpenEditTask(task)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="create-outline" size={17} color={theme.muted} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => handleDeleteTask(task)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <Ionicons name="trash-outline" size={17} color="#E11D48" />
+                              </TouchableOpacity>
+                            </View>
+                          )}
                         </View>
                       </View>
                       {!!task.moTa && <Text numberOfLines={2} style={[styles.taskDesc, { color: theme.muted }]}>{task.moTa}</Text>}
                       <View style={styles.taskMeta}>
+                        {task.hanHoanThanh && (
+                          <View style={styles.metaItem}>
+                            <Ionicons name="calendar-outline" size={12} color={theme.muted} />
+                            <Text style={[styles.metaText, { color: theme.muted }]}>
+                              {new Date(task.hanHoanThanh).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                          </View>
+                        )}
                         {task.nguoiNhan && (
                           <View style={styles.metaItem}>
                             <Ionicons name="person-outline" size={12} color={theme.muted} />
@@ -391,7 +519,7 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
                         </TouchableOpacity>
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -399,7 +527,7 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
             {/* Assign task - only leader */}
             {isLeader && (
               <TouchableOpacity
-                onPress={() => setShowTaskModal(true)}
+                onPress={handleOpenCreateTask}
                 style={[styles.assignBtn, { backgroundColor: theme.primary }]}>
                 <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
                 <Text style={styles.actionBtnText}>Giao công việc</Text>
@@ -436,8 +564,22 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
         teamId={detail?.id}
         userId={user?.id}
         members={detail?.thanhViens ?? []}
-        onClose={() => setShowTaskModal(false)}
-        onCreated={() => { setShowTaskModal(false); onRefresh(); }}
+        editingTask={editingTask}
+        onClose={() => { setShowTaskModal(false); setEditingTask(null); }}
+        onCreated={() => { setShowTaskModal(false); setEditingTask(null); onRefresh(); }}
+      />
+
+      <TaskDetailModal
+        visible={!!viewingTask}
+        task={viewingTask}
+        theme={theme}
+        isDark={isDark}
+        isLeader={isLeader}
+        userId={user?.id}
+        onClose={() => setViewingTask(null)}
+        onEdit={(task) => handleOpenEditTask(task)}
+        onDelete={(task) => handleDeleteTask(task)}
+        onUpdateStatus={handleUpdateTaskStatus}
       />
     </SafeAreaView>
   );
@@ -646,10 +788,33 @@ function TransferLeaderModal({ visible, theme, teamId, userId, members, onClose,
 // ─────────────────────────────────────────────────────────────
 // ASSIGN TASK MODAL
 // ─────────────────────────────────────────────────────────────
-function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, onClose, onCreated }) {
-  const [form, setForm] = useState({ tieuDe: '', moTa: '', mucDoUuTien: 'TRUNG_BINH', hanHoanThanh: '', nguoiNhanId: null, fileDinhKem: [] });
+function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, editingTask, onClose, onCreated }) {
+  const [form, setForm] = useState(() => editingTask ? {
+        tieuDe: editingTask.tieuDe ?? '',
+        moTa: editingTask.moTa ?? '',
+        mucDoUuTien: editingTask.mucDoUuTien ?? 'TRUNG_BINH',
+        dueDay: editingTask.hanHoanThanh ? new Date(editingTask.hanHoanThanh) : null,
+        dueHour: editingTask.hanHoanThanh
+          ? String(new Date(editingTask.hanHoanThanh).getHours()).padStart(2, '0')
+          : '',
+        dueMinute: editingTask.hanHoanThanh
+          ? String(new Date(editingTask.hanHoanThanh).getMinutes()).padStart(2, '0')
+          : '',
+        nguoiNhanId: editingTask.nguoiNhanId ?? null,
+        fileDinhKem: editingTask.fileDinhKem ?? [],
+      } : {
+        tieuDe: '',
+        moTa: '',
+        mucDoUuTien: 'TRUNG_BINH',
+        dueDay: null,
+        dueHour: '',
+        dueMinute: '',
+        nguoiNhanId: null,
+        fileDinhKem: [],
+      });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const PRIORITY_OPTIONS = [
     { value: 'CAO', label: 'Cao', color: '#EF4444' },
@@ -659,19 +824,48 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, onCl
 
   async function handleAssign() {
     if (!form.tieuDe.trim()) { setError('Vui lòng nhập tiêu đề.'); return; }
+    if (form.dueHour !== '') {
+      const h = parseInt(form.dueHour, 10);
+      if (isNaN(h) || h < 0 || h > 23) {
+        setError('Giờ phải nằm trong khoảng từ 00 đến 23.');
+        return;
+      }
+    }
+    if (form.dueMinute !== '') {
+      const m = parseInt(form.dueMinute, 10);
+      if (isNaN(m) || m < 0 || m > 59) {
+        setError('Phút phải nằm trong khoảng từ 00 đến 59.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     try {
-      await createGroupTask(teamId, {
+      const hanHoanThanh = (() => {
+        if (!form.dueDay) return undefined;
+        const d = new Date(form.dueDay);
+        const h = parseInt(form.dueHour, 10);
+        const m = parseInt(form.dueMinute, 10);
+        d.setHours(!isNaN(h) ? h : 23, !isNaN(m) ? m : 59, 0, 0);
+        return d.toISOString();
+      })();
+
+      const payload = {
         userId,
         tieuDe: form.tieuDe.trim(),
         moTa: form.moTa.trim() || undefined,
         mucDoUuTien: form.mucDoUuTien,
-        hanHoanThanh: form.hanHoanThanh || undefined,
+        hanHoanThanh,
         nguoiNhanId: form.nguoiNhanId,
         fileDinhKem: form.fileDinhKem.length > 0 ? form.fileDinhKem : undefined,
-      });
-      setForm({ tieuDe: '', moTa: '', mucDoUuTien: 'TRUNG_BINH', hanHoanThanh: '', nguoiNhanId: null, fileDinhKem: [] });
+      };
+
+      if (editingTask) {
+        await updateGroupTask(teamId, editingTask.id, payload);
+      } else {
+        await createGroupTask(teamId, payload);
+      }
+
       onCreated();
     } catch (err) {
       setError(err.message);
@@ -680,13 +874,20 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, onCl
     }
   }
 
+  function handleClose() {
+    setError('');
+    onClose();
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
       <View style={styles.modalOverlay}>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Giao công việc</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              {editingTask ? 'Chỉnh sửa công việc' : 'Giao công việc'}
+            </Text>
+            <TouchableOpacity onPress={handleClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: theme.text }]}>Tiêu đề *</Text>
@@ -726,15 +927,70 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, onCl
               ))}
             </View>
 
-            <Text style={[styles.label, { color: theme.text }]}>Hạn hoàn thành (YYYY-MM-DD)</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
-              placeholder="2025-12-31"
-              placeholderTextColor={theme.muted}
-              value={form.hanHoanThanh}
-              onChangeText={(v) => setForm((f) => ({ ...f, hanHoanThanh: v }))}
-              keyboardType="numeric"
-            />
+            {/* Hạn hoàn thành: Ngày, Giờ, Phút tách riêng */}
+            <Text style={[styles.label, { color: theme.text }]}>Hạn hoàn thành</Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={[styles.textInput, styles.pickerBtn, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Ionicons name="calendar-outline" size={17} color={theme.muted} />
+              <Text style={{ color: form.dueDay ? theme.text : theme.muted, fontSize: 14, flex: 1 }}>
+                {form.dueDay ? form.dueDay.toLocaleDateString('vi-VN') : 'Chọn ngày...'}
+              </Text>
+              {form.dueDay && (
+                <TouchableOpacity onPress={() => setForm((f) => ({ ...f, dueDay: null }))}>
+                  <Ionicons name="close-circle" size={17} color={theme.muted} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={form.dueDay ?? new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onDismiss={() => setShowDatePicker(false)}
+                  onValueChange={(_, date) => {
+                  setShowDatePicker(false);
+                  if (date) setForm((f) => ({ ...f, dueDay: date }));
+                }}
+              />
+            )}
+            <View style={styles.timeRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.timeLabel, { color: theme.muted }]}>Giờ (00–23)</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, textAlign: 'center' }]}
+                  placeholder="HH"
+                  placeholderTextColor={theme.muted}
+                  value={form.dueHour}
+                  onChangeText={(v) => {
+                    const num = v.replace(/\D/g, '').slice(0, 2);
+                    if (num === '' || parseInt(num, 10) <= 23) {
+                      setForm((f) => ({ ...f, dueHour: num }));
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+              <Text style={[styles.timeSep, { color: theme.text }]}>:</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.timeLabel, { color: theme.muted }]}>Phút (00–59)</Text>
+                <TextInput
+                  style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, textAlign: 'center' }]}
+                  placeholder="mm"
+                  placeholderTextColor={theme.muted}
+                  value={form.dueMinute}
+                  onChangeText={(v) => {
+                    const num = v.replace(/\D/g, '').slice(0, 2);
+                    if (num === '' || parseInt(num, 10) <= 59) {
+                      setForm((f) => ({ ...f, dueMinute: num }));
+                    }
+                  }}
+                  keyboardType="numeric"
+                  maxLength={2}
+                />
+              </View>
+            </View>
 
             <Text style={[styles.label, { color: theme.text }]}>Giao cho</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
@@ -772,8 +1028,144 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, onCl
 
             {!!error && <Text style={styles.formError}>{error}</Text>}
             <TouchableOpacity onPress={handleAssign} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.7 }]}>
-              {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.saveBtnText}>Giao công việc</Text>}
+              {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
+                <Text style={styles.saveBtnText}>{editingTask ? 'Lưu thay đổi' : 'Giao công việc'}</Text>
+              )}
             </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// TASK DETAIL MODAL
+// ─────────────────────────────────────────────────────────────
+function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClose, onEdit, onDelete, onUpdateStatus }) {
+  if (!task) return null;
+  const color = STATUS_COLORS[task.trangThai] ?? '#6366F1';
+  const isAssignedToMe = task.nguoiNhanId === userId;
+  const canUpdateStatus = isAssignedToMe || isLeader;
+
+  const PRIORITY_LABELS = {
+    CAO: { label: 'Ưu tiên Cao', color: '#EF4444' },
+    TRUNG_BINH: { label: 'Ưu tiên Vừa', color: '#F59E0B' },
+    THAP: { label: 'Ưu tiên Thấp', color: '#10B981' },
+  };
+  const priorityInfo = PRIORITY_LABELS[task.mucDoUuTien] ?? PRIORITY_LABELS.TRUNG_BINH;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Chi tiết công việc</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {/* Title */}
+            <Text style={[styles.detailTaskTitle, { color: theme.text }]}>{task.tieuDe}</Text>
+
+            {/* Badges */}
+            <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10, flexWrap: 'wrap' }}>
+              <View style={[styles.statusBadge, { backgroundColor: `${color}18`, paddingHorizontal: 10, paddingVertical: 5 }]}>
+                <Text style={[styles.statusText, { color, fontSize: 12 }]}>{STATUS_LABELS[task.trangThai] ?? task.trangThai}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: `${priorityInfo.color}18`, paddingHorizontal: 10, paddingVertical: 5 }]}>
+                <Text style={[styles.statusText, { color: priorityInfo.color, fontSize: 12 }]}>{priorityInfo.label}</Text>
+              </View>
+            </View>
+
+            {/* Description */}
+            <Text style={[styles.detailSectionLabel, { color: theme.muted }]}>MÔ TẢ</Text>
+            <View style={[styles.detailInfoBox, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Text style={[styles.detailInfoText, { color: task.moTa ? theme.text : theme.muted }]}>
+                {task.moTa || 'Không có mô tả chi tiết cho công việc này.'}
+              </Text>
+            </View>
+
+            {/* People & Deadline */}
+            <Text style={[styles.detailSectionLabel, { color: theme.muted, marginTop: 14 }]}>THÔNG TIN GIAO VIỆC</Text>
+            <View style={[styles.detailInfoBox, { backgroundColor: theme.background, borderColor: theme.border, gap: 10 }]}>
+              <View style={styles.detailRow}>
+                <Ionicons name="person-outline" size={16} color={theme.muted} />
+                <Text style={[styles.detailRowLabel, { color: theme.muted }]}>Người nhận:</Text>
+                <Text style={[styles.detailRowValue, { color: theme.text }]}>
+                  {task.nguoiNhan ? (task.nguoiNhan.hoTen || task.nguoiNhan.tenDangNhap) : 'Tất cả thành viên'}
+                </Text>
+              </View>
+              {task.nguoiGiao && (
+                <View style={styles.detailRow}>
+                  <Ionicons name="person-circle-outline" size={16} color={theme.muted} />
+                  <Text style={[styles.detailRowLabel, { color: theme.muted }]}>Người giao:</Text>
+                  <Text style={[styles.detailRowValue, { color: theme.text }]}>
+                    {task.nguoiGiao.hoTen || task.nguoiGiao.tenDangNhap}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.detailRow}>
+                <Ionicons name="calendar-outline" size={16} color={theme.muted} />
+                <Text style={[styles.detailRowLabel, { color: theme.muted }]}>Hạn chót:</Text>
+                <Text style={[styles.detailRowValue, { color: task.hanHoanThanh ? theme.text : theme.muted }]}>
+                  {task.hanHoanThanh
+                    ? new Date(task.hanHoanThanh).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'Không đặt hạn chót'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Attachments */}
+            <Text style={[styles.detailSectionLabel, { color: theme.muted, marginTop: 14 }]}>TỆP ĐÍNH KÈM ({task.fileDinhKem?.length || 0})</Text>
+            {(!task.fileDinhKem || task.fileDinhKem.length === 0) ? (
+              <View style={[styles.detailInfoBox, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Text style={[styles.detailInfoText, { color: theme.muted }]}>Không có tệp đính kèm nào.</Text>
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {task.fileDinhKem.map((file, idx) => (
+                  <View key={idx} style={[styles.attachmentItem, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                    <Ionicons name="document-attach-outline" size={20} color={theme.primary} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text numberOfLines={1} style={[styles.attachmentName, { color: theme.text }]}>{file.filename || file.name || `Tệp ${idx + 1}`}</Text>
+                      {file.size && <Text style={[styles.attachmentSize, { color: theme.muted }]}>{(file.size / 1024).toFixed(1)} KB</Text>}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Status change action */}
+            {canUpdateStatus && task.trangThai !== 'HOAN_THANH' && (
+              <TouchableOpacity
+                onPress={() => {
+                  onUpdateStatus(task, task.trangThai === 'CHUA_LAM' ? 'DANG_LAM' : 'HOAN_THANH');
+                  onClose();
+                }}
+                style={[styles.saveBtn, { backgroundColor: color, marginTop: 16 }]}>
+                <Text style={styles.saveBtnText}>
+                  {task.trangThai === 'CHUA_LAM' ? 'Bắt đầu làm công việc này' : 'Đánh dấu đã hoàn thành'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Leader edit / delete */}
+            {isLeader && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <TouchableOpacity
+                  onPress={() => { onEdit(task); }}
+                  style={[styles.outlineBtn, { borderColor: theme.primary, flex: 1 }]}>
+                  <Ionicons name="create-outline" size={17} color={theme.primary} />
+                  <Text style={[styles.outlineBtnText, { color: theme.primary }]}>Chỉnh sửa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { onDelete(task); }}
+                  style={[styles.outlineBtn, { borderColor: '#E11D48', flex: 1 }]}>
+                  <Ionicons name="trash-outline" size={17} color="#E11D48" />
+                  <Text style={[styles.outlineBtnText, { color: '#E11D48' }]}>Xóa việc</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -847,6 +1239,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '700', marginBottom: 8, marginTop: 14 },
   textInput: { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14 },
   textArea: { minHeight: 80, paddingTop: 12 },
+  pickerBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 },
+  timeLabel: { fontSize: 11, fontWeight: '600', marginBottom: 6 },
+  timeSep: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   optionChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5 },
   optionDot: { width: 8, height: 8, borderRadius: 4 },
@@ -857,4 +1253,21 @@ const styles = StyleSheet.create({
   transferNote: { fontSize: 13, lineHeight: 20, marginBottom: 8, padding: 12, backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 10 },
   memberChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5 },
   memberChipText: { fontSize: 12.5, fontWeight: '700' },
+  // Filter bar
+  filterBar: { marginTop: 4, marginBottom: 8 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  filterChipText: { fontSize: 12, fontWeight: '700' },
+  // Detail Modal styles
+  detailTaskTitle: { fontSize: 18, fontWeight: '800', lineHeight: 24 },
+  detailSectionLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 1.1, marginBottom: 6 },
+  detailInfoBox: { padding: 12, borderRadius: 12, borderWidth: 1 },
+  detailInfoText: { fontSize: 13.5, lineHeight: 20 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailRowLabel: { fontSize: 13, fontWeight: '600', width: 95 },
+  detailRowValue: { fontSize: 13, fontWeight: '700', flex: 1 },
+  attachmentItem: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderRadius: 10, borderWidth: 1 },
+  attachmentName: { fontSize: 13, fontWeight: '600' },
+  attachmentSize: { fontSize: 11, marginTop: 2 },
+  outlineBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 46, borderRadius: 12, borderWidth: 1.5 },
+  outlineBtnText: { fontSize: 14, fontWeight: '700' },
 });

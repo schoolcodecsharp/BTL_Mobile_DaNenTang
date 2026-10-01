@@ -1,11 +1,15 @@
 import { apiFetch } from './api';
+import { changeTaskReminder, reminderRevision, reportReminderError, syncTaskReminders } from './task-reminders';
 
 /**
  * Lấy danh sách công việc của user.
  * @param {number} userId
  */
 export async function getTasks(userId) {
-  return apiFetch(`/api/users/${userId}/tasks`);
+  const revision = reminderRevision();
+  const tasks = await apiFetch(`/api/users/${userId}/tasks`);
+  await syncTaskReminders(userId, tasks ?? [], revision).catch(reportReminderError);
+  return tasks;
 }
 
 /**
@@ -14,7 +18,9 @@ export async function getTasks(userId) {
  * @param {{ title: string, description?: string, priority?: string, status?: string, categoryId?: number, startDate?: string, dueDate?: string, attachments?: object[] }} payload
  */
 export async function createTask(userId, payload) {
-  return apiFetch(`/api/users/${userId}/tasks`, { method: 'POST', body: payload });
+  const task = await apiFetch(`/api/users/${userId}/tasks`, { method: 'POST', body: payload });
+  await changeTaskReminder(userId, task).catch(reportReminderError);
+  return task;
 }
 
 /**
@@ -24,7 +30,13 @@ export async function createTask(userId, payload) {
  * @param {object} payload
  */
 export async function updateTask(userId, taskId, payload) {
-  return apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'PUT', body: payload });
+  const result = await apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'PUT', body: payload });
+  // The update endpoint returns 204; use its replacement payload for the reminder.
+  await changeTaskReminder(userId, {
+    id: taskId, tieuDe: payload.title, hanHoanThanh: payload.dueDate,
+    trangThai: payload.status ?? 'CHUA_LAM',
+  }).catch(reportReminderError);
+  return result;
 }
 
 /**
@@ -33,5 +45,7 @@ export async function updateTask(userId, taskId, payload) {
  * @param {number} taskId
  */
 export async function deleteTask(userId, taskId) {
-  return apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'DELETE' });
+  const result = await apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'DELETE' });
+  await changeTaskReminder(userId, { id: taskId }, true).catch(reportReminderError);
+  return result;
 }

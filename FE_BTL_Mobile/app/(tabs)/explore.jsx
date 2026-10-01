@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthSession } from '@/components/auth-session';
+import { useTaskReminders } from '@/components/task-reminder-provider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const MENU_GROUPS = [
@@ -23,7 +23,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const isDark = useColorScheme() === 'dark';
   const { user, signOut } = useAuthSession();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { notificationsEnabled, setNotificationsEnabled, notificationsDisabled } = useTaskReminders();
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC', surface: isDark ? '#151E31' : '#FFFFFF',
     text: isDark ? '#F8FAFC' : '#172033', muted: isDark ? '#91A0B7' : '#6B7280',
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
 
         <Text style={[styles.groupLabel, { color: theme.muted }]}>CÀI ĐẶT CHUNG</Text>
         <View style={[styles.menuCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-          <View style={styles.menuRow}><View style={[styles.menuIcon, { backgroundColor: isDark ? '#3F1D2E' : '#FFF1F2' }]}><Ionicons name="notifications-outline" size={20} color="#F43F5E" /></View><View style={styles.menuCopy}><Text style={[styles.menuTitle, { color: theme.text }]}>Thông báo</Text><Text style={[styles.menuSubtitle, { color: theme.muted }]}>Nhắc việc và cập nhật</Text></View><Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ false: '#CBD5E1', true: '#A5B4FC' }} thumbColor={notificationsEnabled ? theme.primary : '#F8FAFC'} /></View>
+          <View style={styles.menuRow}><View style={[styles.menuIcon, { backgroundColor: isDark ? '#3F1D2E' : '#FFF1F2' }]}><Ionicons name="notifications-outline" size={20} color="#F43F5E" /></View><View style={styles.menuCopy}><Text style={[styles.menuTitle, { color: theme.text }]}>Thông báo</Text><Text style={[styles.menuSubtitle, { color: theme.muted }]}>Nhắc trước hạn 10 phút</Text></View><Switch disabled={notificationsDisabled} value={notificationsEnabled} onValueChange={setNotificationsEnabled} trackColor={{ false: '#CBD5E1', true: '#A5B4FC' }} thumbColor={notificationsEnabled ? theme.primary : '#F8FAFC'} /></View>
           {MENU_GROUPS[0].map((item) => <MenuRow key={item.title} item={item} theme={theme} isDark={isDark} />)}
         </View>
 

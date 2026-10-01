@@ -1,3 +1,5 @@
+import { useFocusEffect , useLocalSearchParams, useRouter } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
@@ -5,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -52,12 +55,16 @@ const EMPTY_FORM = {
   description: '',
   priority: 'TRUNG_BINH',
   status: 'CHUA_LAM',
-  dueDate: '',
+  dueDay: null,     // Date object | null
+  dueHour: '',      // "HH"
+  dueMinute: '',    // "mm"
   categoryId: null,
   attachments: [],
 };
 
 export default function TasksScreen() {
+  const { taskId } = useLocalSearchParams();
+  const router = useRouter();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthSession();
   const [tasks, setTasks] = useState([]);
@@ -69,6 +76,7 @@ export default function TasksScreen() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC',
@@ -83,7 +91,7 @@ export default function TasksScreen() {
 
   const fetchTasks = useCallback(async (isRefresh = false) => {
     if (!user?.id) return;
-    isRefresh ? setRefreshing(true) : setLoading(true);
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     setError('');
     try {
       const data = await getTasks(user.id);
@@ -94,9 +102,9 @@ export default function TasksScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.id]);
+  }, [user]);
 
-  useEffect(() => { fetchTasks(); }, [fetchTasks]);
+  useFocusEffect(useCallback(() => { void fetchTasks(); }, [fetchTasks]));
 
   function openCreate() {
     setEditingTask(null);
@@ -105,20 +113,39 @@ export default function TasksScreen() {
     setShowModal(true);
   }
 
-  function openEdit(task) {
+  const openEdit = useCallback((task) => {
     setEditingTask(task);
     setForm({
       title: task.tieuDe,
       description: task.moTa ?? '',
       priority: task.mucDoUuTien ?? 'TRUNG_BINH',
       status: task.trangThai ?? 'CHUA_LAM',
-      dueDate: task.hanHoanThanh ? new Date(task.hanHoanThanh).toISOString().slice(0, 10) : '',
+      dueDay: task.hanHoanThanh ? new Date(task.hanHoanThanh) : null,
+      dueHour: task.hanHoanThanh
+        ? String(new Date(task.hanHoanThanh).getHours()).padStart(2, '0')
+        : '',
+      dueMinute: task.hanHoanThanh
+        ? String(new Date(task.hanHoanThanh).getMinutes()).padStart(2, '0')
+        : '',
       categoryId: task.danhMucId ?? null,
       attachments: task.fileDinhKem ?? [],
     });
     setFormError('');
     setShowModal(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!taskId || loading) return;
+    const task = tasks.find((item) => String(item.id) === String(taskId));
+    if (!task) return;
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      openEdit(task);
+      router.setParams({ taskId: '' });
+    });
+    return () => { active = false; };
+  }, [taskId, tasks, loading, router, openEdit]);
 
   function closeModal() {
     setShowModal(false);
@@ -130,15 +157,37 @@ export default function TasksScreen() {
   async function handleSave() {
     if (!form.title.trim()) { setFormError('Vui lòng nhập tiêu đề công việc.'); return; }
     if (!user?.id) { setFormError('Bạn cần đăng nhập để lưu công việc.'); return; }
+    if (form.dueHour !== '') {
+      const h = parseInt(form.dueHour, 10);
+      if (isNaN(h) || h < 0 || h > 23) {
+        setFormError('Giờ phải nằm trong khoảng từ 00 đến 23.');
+        return;
+      }
+    }
+    if (form.dueMinute !== '') {
+      const m = parseInt(form.dueMinute, 10);
+      if (isNaN(m) || m < 0 || m > 59) {
+        setFormError('Phút phải nằm trong khoảng từ 00 đến 59.');
+        return;
+      }
+    }
     setSaving(true);
     setFormError('');
     try {
+      const dueDate = (() => {
+        if (!form.dueDay) return undefined;
+        const d = new Date(form.dueDay);
+        const h = parseInt(form.dueHour, 10);
+        const m = parseInt(form.dueMinute, 10);
+        d.setHours(!isNaN(h) ? h : 23, !isNaN(m) ? m : 59, 0, 0);
+        return d.toISOString();
+      })();
       const payload = {
         title: form.title.trim(),
         description: form.description.trim() || undefined,
         priority: form.priority,
         status: form.status,
-        dueDate: form.dueDate || undefined,
+        dueDate,
         categoryId: form.categoryId ?? undefined,
         attachments: form.attachments.length > 0 ? form.attachments : undefined,
       };
@@ -219,7 +268,7 @@ export default function TasksScreen() {
                   key={task.id}
                   activeOpacity={0.75}
                   onPress={() => openEdit(task)}
-                  style={[styles.taskCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  style={[styles.taskCard, { backgroundColor: isDark ? `${color}18` : `${color}0D`, borderColor: `${color}55` }]}>
                   <View style={[styles.statusBar, { backgroundColor: color }]} />
                   <View style={styles.taskBody}>
                     <View style={styles.taskTop}>
@@ -236,7 +285,7 @@ export default function TasksScreen() {
                         <View style={styles.metaItem}>
                           <Ionicons name="calendar-outline" size={12} color={theme.muted} />
                           <Text style={[styles.metaText, { color: theme.muted }]}>
-                            {new Date(task.hanHoanThanh).toLocaleDateString('vi-VN')}
+                            {new Date(task.hanHoanThanh).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </Text>
                         </View>
                       )}
@@ -342,15 +391,71 @@ export default function TasksScreen() {
               </View>
 
               {/* Due date */}
-              <Text style={[styles.label, { color: theme.text }]}>Hạn hoàn thành (YYYY-MM-DD)</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
-                placeholder="2025-12-31"
-                placeholderTextColor={theme.muted}
-                value={form.dueDate}
-                onChangeText={(v) => setForm((f) => ({ ...f, dueDate: v }))}
-                keyboardType="numeric"
-              />
+              <Text style={[styles.label, { color: theme.text }]}>Hạn hoàn thành</Text>
+              {/* Ngày */}
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                style={[styles.textInput, styles.pickerBtn, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <Ionicons name="calendar-outline" size={17} color={theme.muted} />
+                <Text style={{ color: form.dueDay ? theme.text : theme.muted, fontSize: 14, flex: 1 }}>
+                  {form.dueDay ? form.dueDay.toLocaleDateString('vi-VN') : 'Chọn ngày...'}
+                </Text>
+                {form.dueDay && (
+                  <TouchableOpacity onPress={() => setForm((f) => ({ ...f, dueDay: null }))}>
+                    <Ionicons name="close-circle" size={17} color={theme.muted} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={form.dueDay ?? new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onDismiss={() => setShowDatePicker(false)}
+                  onValueChange={(_, date) => {
+                    setShowDatePicker(false);
+                    if (date) setForm((f) => ({ ...f, dueDay: date }));
+                  }}
+                />
+              )}
+              {/* Giờ và Phút */}
+              <View style={styles.timeRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.timeLabel, { color: theme.muted }]}>Giờ (00–23)</Text>
+                  <TextInput
+                    style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, textAlign: 'center' }]}
+                    placeholder="HH"
+                    placeholderTextColor={theme.muted}
+                    value={form.dueHour}
+                    onChangeText={(v) => {
+                      const num = v.replace(/\D/g, '').slice(0, 2);
+                      if (num === '' || parseInt(num, 10) <= 23) {
+                        setForm((f) => ({ ...f, dueHour: num }));
+                      }
+                    }}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+                <Text style={[styles.timeSep, { color: theme.text }]}>:</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.timeLabel, { color: theme.muted }]}>Phút (00–59)</Text>
+                  <TextInput
+                    style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, textAlign: 'center' }]}
+                    placeholder="mm"
+                    placeholderTextColor={theme.muted}
+                    value={form.dueMinute}
+                    onChangeText={(v) => {
+                      const num = v.replace(/\D/g, '').slice(0, 2);
+                      if (num === '' || parseInt(num, 10) <= 59) {
+                        setForm((f) => ({ ...f, dueMinute: num }));
+                      }
+                    }}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                </View>
+              </View>
 
               {/* File attachments */}
               <Text style={[styles.label, { color: theme.text }]}>Tệp đính kèm</Text>
@@ -416,6 +521,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '700', marginBottom: 8, marginTop: 14 },
   textInput: { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14 },
   textArea: { minHeight: 80, paddingTop: 12 },
+  pickerBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 8 },
+  timeLabel: { fontSize: 11, fontWeight: '600', marginBottom: 6 },
+  timeSep: { fontSize: 22, fontWeight: '700', marginBottom: 10 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   optionChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5 },
   optionDot: { width: 8, height: 8, borderRadius: 4 },
