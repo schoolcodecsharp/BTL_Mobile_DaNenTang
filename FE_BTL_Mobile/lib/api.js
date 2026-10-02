@@ -81,42 +81,37 @@ export async function apiFetch(path, options = {}) {
 
 /**
  * Upload files using multipart/form-data.
- * @param {Array<{uri: string, name: string, type: string}>} files
+ * @param {Array<{uri: string, name: string, type: string, file?: File}>} files
  */
 export async function apiUpload(files) {
   const baseUrl = getBaseUrl();
   const form = new FormData();
   files.forEach((f) => {
-    form.append('file', { uri: f.uri, name: f.name, type: f.type });
+    if (f.file) form.append('file', f.file, f.name);
+    else form.append('file', { uri: f.uri, name: f.name, type: f.type });
   });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-
-  const headers = { Accept: 'application/json' };
-  if (_authToken) {
-    headers['Authorization'] = `Bearer ${_authToken}`;
-  }
-
-  try {
-    const res = await fetch(`${baseUrl}/api/upload`, {
-      method: 'POST',
-      headers,
-      body: form,
-      signal: controller.signal,
-    });
-
-    const text = await res.text();
-    let data = null;
-    try { data = JSON.parse(text); } catch { /* empty */ }
-
-    if (!res.ok) throw new ApiError(parseError(data, res.status), res.status);
-    return data; // { files: [{url, filename, mimetype, size}] }
-  } catch (err) {
-    if (err instanceof ApiError) throw err;
-    if (controller.signal.aborted) throw new ApiError('Upload quá lâu. Vui lòng thử lại.');
-    throw new ApiError('Không thể tải file lên. Kiểm tra mạng.');
-  } finally {
-    clearTimeout(timer);
-  }
+  // Expo SDK 57's global fetch cannot encode React Native URI file parts.
+  // XMLHttpRequest uses the native multipart transport and reads the local file.
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${baseUrl}/api/upload`);
+    request.timeout = 30000;
+    request.setRequestHeader('Accept', 'application/json');
+    if (_authToken) request.setRequestHeader('Authorization', `Bearer ${_authToken}`);
+    // Let the transport set Content-Type together with the multipart boundary.
+    request.onload = () => {
+      let data = null;
+      try { data = JSON.parse(request.responseText); } catch { /* empty */ }
+      if (request.status < 200 || request.status >= 300) {
+        reject(new ApiError(parseError(data, request.status), request.status));
+      } else {
+        resolve(data);
+      }
+    };
+    request.onerror = () => reject(new ApiError('Không thể tải file lên. Kiểm tra mạng và địa chỉ API.'));
+    request.ontimeout = () => reject(new ApiError('Upload quá lâu. Vui lòng thử lại.'));
+    request.onabort = () => reject(new ApiError('Đã hủy tải file lên.'));
+    request.send(form);
+  });
 }

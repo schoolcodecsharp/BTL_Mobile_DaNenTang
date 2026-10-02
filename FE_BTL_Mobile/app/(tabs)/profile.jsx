@@ -1,5 +1,6 @@
 import { useFocusEffect , useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,6 +14,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,6 +23,7 @@ import { useTaskReminders } from '@/components/task-reminder-provider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getTasks } from '@/lib/tasks-api';
 import { changeUserPassword, updateUserProfile } from '@/lib/users-api';
+import { apiUpload } from '@/lib/api';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -149,7 +152,7 @@ export default function ProfileScreen() {
         <View style={[styles.profileCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+              {user?.avatar ? <Image source={{ uri: user.avatar }} style={styles.avatarImage} /> : <Text style={styles.avatarText}>{initials}</Text>}
             </View>
             <View style={styles.onlineBadge} />
           </View>
@@ -349,6 +352,18 @@ function EditProfileModal({ visible, user, theme, onClose, onUpdated }) {
   const [email, setEmail] = useState(user.email ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [avatar, setAvatar] = useState(user.avatar ?? null);
+  const [avatarAsset, setAvatarAsset] = useState(null);
+
+  async function pickAvatar() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { setError('Cần quyền truy cập thư viện ảnh để chọn ảnh đại diện.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+    if (!result.canceled && result.assets?.[0]) {
+      setAvatarAsset(result.assets[0]);
+      setAvatar(result.assets[0].uri);
+    }
+  }
 
 
   async function handleSave() {
@@ -363,13 +378,23 @@ function EditProfileModal({ visible, user, theme, onClose, onUpdated }) {
     setSaving(true);
     setError('');
     try {
+      let avatarUrl = avatar;
+      if (avatarAsset) {
+        const upload = await apiUpload([{ uri: avatarAsset.uri,
+          name: avatarAsset.fileName || `avatar-${user.id}.jpg`, type: avatarAsset.mimeType || 'image/jpeg',
+          file: avatarAsset.file }]);
+        avatarUrl = upload?.files?.[0]?.url;
+        if (!avatarUrl) throw new Error('Không nhận được địa chỉ ảnh sau khi tải lên.');
+      }
       const res = await updateUserProfile(user.id, {
         fullName: fullName.trim() || undefined,
         email: email.trim(),
+        avatarUrl,
       });
       onUpdated({
         fullName: res?.fullName ?? fullName.trim(),
         email: res?.email ?? email.trim(),
+        avatar: res?.avatarUrl ?? avatarUrl,
       });
     } catch (err) {
       setError(err.message);
@@ -389,6 +414,13 @@ function EditProfileModal({ visible, user, theme, onClose, onUpdated }) {
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
+            <View style={{ alignItems: 'center', marginBottom: 10 }}>
+              <TouchableOpacity onPress={pickAvatar} style={styles.avatar}>
+                {avatar ? <Image source={{ uri: avatar }} style={styles.avatarImage} /> : <Ionicons name="camera-outline" size={28} color="#FFFFFF" />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={pickAvatar}><Text style={{ color: theme.primary, fontWeight: '700', padding: 8 }}>Chọn ảnh đại diện</Text></TouchableOpacity>
+              {!!avatar && <TouchableOpacity onPress={() => { setAvatar(null); setAvatarAsset(null); }}><Text style={{ color: '#E11D48', padding: 5 }}>Xóa ảnh</Text></TouchableOpacity>}
+            </View>
             <Text style={[styles.inputLabel, { color: theme.text }]}>Tên đăng nhập (không thể đổi)</Text>
             <View style={[styles.textInput, styles.disabledInput, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <Ionicons name="lock-closed-outline" size={16} color={theme.muted} />
@@ -634,8 +666,9 @@ const styles = StyleSheet.create({
   headerButton: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   profileCard: { borderRadius: 24, borderWidth: 1, paddingTop: 23, alignItems: 'center', overflow: 'hidden', marginBottom: 25, elevation: 2 },
   avatarWrap: { marginBottom: 12 },
-  avatar: { width: 82, height: 82, borderRadius: 27, backgroundColor: '#5B5CE2', alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: '#EEF2FF' },
+  avatar: { width: 82, height: 82, borderRadius: 27, overflow: 'hidden', backgroundColor: '#5B5CE2', alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: '#EEF2FF' },
   avatarText: { color: '#FFFFFF', fontSize: 25, fontWeight: '800' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 23, resizeMode: 'cover' },
   onlineBadge: { position: 'absolute', right: -1, bottom: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: '#10B981', borderWidth: 3, borderColor: '#FFFFFF' },
   name: { fontSize: 21, fontWeight: '800', marginBottom: 4 },
   email: { fontSize: 13, marginBottom: 15 },
