@@ -1,15 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuthSession } from './auth-session';
 import { markHistoryRead, readHistory, subscribeHistory } from '@/lib/notification-history';
+import { getNotifications, markNotificationRead } from '@/lib/notifications-api';
 
 export function NotificationInbox({ theme }) {
   const { user } = useAuthSession();
   const [visible, setVisible] = useState(false);
   const [history, setHistory] = useState({ userId: null, items: [] });
-  const items = history.userId === user?.id ? history.items : [];
+  const [serverHistory, setServerHistory] = useState({ userId: null, items: [] });
+  const localItems = history.userId === user?.id ? history.items : [];
+  const serverItems = serverHistory.userId === user?.id ? serverHistory.items : [];
+  const items = [...serverItems.map((item) => ({ id: `server:${item.id}`, serverId: item.id,
+    title: item.tieuDe, body: item.noiDung || '', date: new Date(item.ngayTao).getTime(), read: item.daDoc,
+    taskId: item.congViecId, teamId: item.nhomId, groupTaskId: item.congViecNhomId })), ...localItems]
+    .sort((a, b) => b.date - a.date);
+  const refreshServer = useCallback(async () => {
+    if (!user?.id) return;
+    const list = await getNotifications(user.id);
+    setServerHistory({ userId: user.id, items: list ?? [] });
+  }, [user]);
+  useFocusEffect(useCallback(() => {
+    void refreshServer().catch(() => {});
+    const timer = setInterval(() => void refreshServer().catch(() => {}), 30000);
+    return () => clearInterval(timer);
+  }, [refreshServer]));
   useEffect(() => {
     if (!user?.id) return;
     let active = true;
@@ -36,9 +53,14 @@ export function NotificationInbox({ theme }) {
           <ScrollView>
             {!items.length && <Text style={{ color: theme.muted, paddingVertical: 24 }}>{user ? 'Chưa có thông báo đã nhận.' : 'Đăng nhập để xem thông báo.'}</Text>}
             {items.map((item) => <TouchableOpacity key={item.id} onPress={async () => {
-              try { await markHistoryRead(user.id, [item.id]); } catch { Alert.alert('Thông báo', 'Chưa lưu được trạng thái đã đọc.'); return; }
+              try {
+                if (item.serverId) await markNotificationRead(user.id, item.serverId);
+                else await markHistoryRead(user.id, [item.id]);
+              } catch { Alert.alert('Thông báo', 'Chưa lưu được trạng thái đã đọc.'); return; }
               setVisible(false);
-              if (item.taskId) router.push({ pathname: '/(tabs)/tasks', params: { taskId: String(item.taskId) } });
+              if (item.teamId && item.groupTaskId) router.push({ pathname: '/(tabs)/teams', params: { teamId: String(item.teamId), taskId: String(item.groupTaskId) } });
+              else if (item.taskId) router.push({ pathname: '/(tabs)/tasks', params: { taskId: String(item.taskId) } });
+              if (item.serverId) void refreshServer().catch(() => {});
             }} style={{ padding: 14, marginBottom: 10, borderRadius: 12, backgroundColor: item.read ? theme.background : '#6366F11A' }}>
               <Text style={{ color: theme.text, fontWeight: item.read ? '500' : '700' }}>{item.title}</Text>
               <Text style={{ color: theme.text, marginTop: 5 }}>{item.body}</Text>

@@ -1,8 +1,8 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,12 +20,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthSession } from '@/components/auth-session';
 import { FilePicker } from '@/components/file-picker';
+import { TaskExtras } from '@/components/task-extras';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   createGroupTask,
   createTeam,
   deleteGroupTask,
   getGroupTasks,
+  getTeamActivity,
   getTeamDetail,
   getTeams,
   inviteMember,
@@ -54,6 +56,8 @@ const STATUS_COLORS = {
 // MAIN SCREEN
 // ─────────────────────────────────────────────────────────────
 export default function TeamsScreen() {
+  const params = useLocalSearchParams();
+  const router = useRouter();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthSession();
 
@@ -92,19 +96,28 @@ export default function TeamsScreen() {
     }
   }, [user]);
 
-  useFocusEffect(useCallback(() => { void fetchTeams(); }, [fetchTeams]));
-
-  async function openTeamDetail(teamId) {
+  const openTeamDetail = useCallback(async (teamId, focusTaskId) => {
     try {
-      const [detail, tasksList] = await Promise.all([
+      const [detail, tasksList, activity] = await Promise.all([
         getTeamDetail(teamId),
         user?.id ? getGroupTasks(teamId, user.id).catch(() => []) : Promise.resolve([]),
+        getTeamActivity(teamId).catch(() => []),
       ]);
-      setSelectedTeam({ id: teamId, detail, tasks: tasksList ?? [] });
+      setSelectedTeam({ id: teamId, detail, tasks: tasksList ?? [], activity: activity ?? [], focusTaskId });
     } catch (err) {
       Alert.alert('Lỗi', err.message);
     }
-  }
+  }, [user]);
+
+  useFocusEffect(useCallback(() => { void fetchTeams(); }, [fetchTeams]));
+  useEffect(() => {
+    if (!params.teamId || !user?.id) return;
+    const timer = setTimeout(() => {
+      void openTeamDetail(params.teamId, params.taskId)
+        .then(() => router.setParams({ teamId: '', taskId: '' }));
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [openTeamDetail, params.taskId, params.teamId, router, user?.id]);
 
   if (selectedTeam) {
     return (
@@ -205,16 +218,17 @@ export default function TeamsScreen() {
 // TEAM DETAIL SCREEN
 // ─────────────────────────────────────────────────────────────
 function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) {
-  const { detail, tasks } = teamData;
+  const { detail, tasks, activity, focusTaskId } = teamData;
   const isLeader = detail?.truongNhomId === user?.id;
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [viewingTask, setViewingTask] = useState(null);
+  const focusedTask = (tasks ?? []).find((task) => String(task.id) === String(focusTaskId));
+  const [viewingTask, setViewingTask] = useState(focusedTask ?? null);
   const [taskFilter, setTaskFilter] = useState('all'); // all | my | doing | done
-  const [activeTab, setActiveTab] = useState('members'); // members | tasks
+  const [activeTab, setActiveTab] = useState(focusedTask ? 'tasks' : 'members'); // members | tasks | activity
   const [refreshing, setRefreshing] = useState(false);
 
   const myTasksCount = useMemo(() => {
@@ -334,7 +348,7 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
 
       {/* Tabs */}
       <View style={[styles.tabBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        {[{ key: 'members', label: 'Thành viên', icon: 'people-outline' }, { key: 'tasks', label: 'Công việc nhóm', icon: 'clipboard-outline' }].map((tab) => (
+        {[{ key: 'members', label: 'Thành viên', icon: 'people-outline' }, { key: 'tasks', label: 'Công việc', icon: 'clipboard-outline' }, { key: 'activity', label: 'Nhật ký', icon: 'time-outline' }].map((tab) => (
           <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} style={[styles.tab, activeTab === tab.key && styles.activeTab]}>
             <Ionicons name={tab.icon} size={16} color={activeTab === tab.key ? theme.primary : theme.muted} />
             <Text style={[styles.tabText, { color: activeTab === tab.key ? theme.primary : theme.muted }]}>{tab.label}</Text>
@@ -533,6 +547,20 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
                 <Text style={styles.actionBtnText}>Giao công việc</Text>
               </TouchableOpacity>
             )}
+          </View>
+        )}
+
+        {activeTab === 'activity' && (
+          <View style={{ gap: 12 }}>
+            {!(activity ?? []).length && <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.border }]}><Ionicons name="time-outline" size={38} color={theme.muted} /><Text style={[styles.emptyTitle, { color: theme.text }]}>Chưa có hoạt động</Text></View>}
+            {(activity ?? []).map((entry) => <View key={entry.id} style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ alignItems: 'center' }}><View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: theme.iconBg, alignItems: 'center', justifyContent: 'center' }}><Ionicons name={entry.hanhDong === 'HOAN_THANH' ? 'checkmark' : entry.hanhDong === 'BINH_LUAN' ? 'chatbubble-outline' : 'create-outline'} size={17} color={theme.primary} /></View><View style={{ flex: 1, width: 2, backgroundColor: theme.border, marginTop: 5 }} /></View>
+              <View style={[styles.detailInfoBox, { flex: 1, backgroundColor: theme.surface, borderColor: theme.border, marginBottom: 4 }]}>
+                <Text style={{ color: theme.text, fontWeight: '700' }}>{entry.nguoiThucHien?.hoTen || entry.nguoiThucHien?.tenDangNhap || 'Thành viên'}</Text>
+                <Text style={{ color: theme.text, marginTop: 4 }}>{entry.noiDung}</Text>
+                <Text style={{ color: theme.muted, fontSize: 11, marginTop: 7 }}>{new Date(entry.ngayTao).toLocaleString('vi-VN')}</Text>
+              </View>
+            </View>)}
           </View>
         )}
       </ScrollView>
@@ -1085,6 +1113,7 @@ function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClo
               </Text>
             </View>
 
+            {visible && <TaskExtras key={task.id} path={`/api/teams/${task.nhomId}/tasks/${task.id}/comments`} theme={theme} comments userId={userId} isLeader={isLeader} />}
             {/* People & Deadline */}
             <Text style={[styles.detailSectionLabel, { color: theme.muted, marginTop: 14 }]}>THÔNG TIN GIAO VIỆC</Text>
             <View style={[styles.detailInfoBox, { backgroundColor: theme.background, borderColor: theme.border, gap: 10 }]}>

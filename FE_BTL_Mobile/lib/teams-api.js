@@ -73,6 +73,10 @@ export async function getGroupTasks(teamId, userId) {
   return apiFetch(`/api/teams/${teamId}/tasks?userId=${userId}`);
 }
 
+export async function getTeamActivity(teamId) {
+  return apiFetch(`/api/teams/${teamId}/activity`);
+}
+
 /**
  * Tạo công việc nhóm (chỉ trưởng nhóm).
  * @param {number} teamId
