@@ -20,6 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthSession } from '@/components/auth-session';
 import { FilePicker } from '@/components/file-picker';
+import { TaskExtras } from '@/components/task-extras';
+import { KanbanBoard } from '@/components/kanban-board';
+import { TaskTrash } from '@/components/task-trash';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { createTask, deleteTask, getTasks, updateTask } from '@/lib/tasks-api';
 
@@ -50,6 +53,13 @@ const STATUS_LABELS = {
   QUA_HAN: 'Quá hạn',
 };
 
+const RECURRENCE_OPTIONS = [
+  { value: 'KHONG', label: 'Không lặp' },
+  { value: 'HANG_NGAY', label: 'Hằng ngày' },
+  { value: 'HANG_TUAN', label: 'Hằng tuần' },
+  { value: 'HANG_THANG', label: 'Hằng tháng' },
+];
+
 const EMPTY_FORM = {
   title: '',
   description: '',
@@ -60,6 +70,7 @@ const EMPTY_FORM = {
   dueMinute: '',    // "mm"
   categoryId: null,
   attachments: [],
+  recurrence: 'KHONG',
 };
 
 export default function TasksScreen() {
@@ -77,6 +88,9 @@ export default function TasksScreen() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
+  const [movingId, setMovingId] = useState(null);
+  const [showTrash, setShowTrash] = useState(false);
 
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC',
@@ -129,6 +143,7 @@ export default function TasksScreen() {
         : '',
       categoryId: task.danhMucId ?? null,
       attachments: task.fileDinhKem ?? [],
+      recurrence: task.lapLai ?? 'KHONG',
     });
     setFormError('');
     setShowModal(true);
@@ -157,6 +172,7 @@ export default function TasksScreen() {
   async function handleSave() {
     if (!form.title.trim()) { setFormError('Vui lòng nhập tiêu đề công việc.'); return; }
     if (!user?.id) { setFormError('Bạn cần đăng nhập để lưu công việc.'); return; }
+    if (form.recurrence !== 'KHONG' && !form.dueDay) { setFormError('Công việc lặp lại cần có hạn hoàn thành.'); return; }
     if (form.dueHour !== '') {
       const h = parseInt(form.dueHour, 10);
       if (isNaN(h) || h < 0 || h > 23) {
@@ -190,6 +206,7 @@ export default function TasksScreen() {
         dueDate,
         categoryId: form.categoryId ?? undefined,
         attachments: form.attachments.length > 0 ? form.attachments : undefined,
+        recurrence: form.recurrence,
       };
       if (editingTask) {
         await updateTask(user.id, editingTask.id, payload);
@@ -222,6 +239,32 @@ export default function TasksScreen() {
     ]);
   }
 
+  const handleMoveTask = useCallback(async (task, status) => {
+    if (!user?.id || movingId) return;
+    setMovingId(task.id);
+    setTasks((current) => current.map(item => item.id === task.id ? { ...item, trangThai: status } : item));
+    try {
+      await updateTask(user.id, task.id, {
+        title: task.tieuDe,
+        description: task.moTa || undefined,
+        priority: task.mucDoUuTien || 'TRUNG_BINH',
+        status,
+        categoryId: task.danhMucId || undefined,
+        startDate: task.ngayBatDau || undefined,
+        dueDate: task.hanHoanThanh || undefined,
+        attachments: task.fileDinhKem ?? [],
+        recurrence: task.lapLai || 'KHONG',
+      });
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      await fetchTasks();
+    } catch (err) {
+      await fetchTasks();
+      Alert.alert('Không thể chuyển công việc', err.message);
+    } finally {
+      setMovingId(null);
+    }
+  }, [fetchTasks, movingId, user]);
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: theme.background }]}>
       {/* Header */}
@@ -230,6 +273,18 @@ export default function TasksScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>CÁ NHÂN</Text>
           <Text style={[styles.pageTitle, { color: theme.text }]}>Công việc của tôi</Text>
         </View>
+      </View>
+      <View style={styles.taskToolbar}>
+        <View style={[styles.viewSwitch, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          {[['list', 'list-outline', 'Danh sách'], ['kanban', 'grid-outline', 'Bảng']].map(([value, icon, label]) => <TouchableOpacity key={value} accessibilityState={{ selected: viewMode === value }} onPress={() => setViewMode(value)} style={[styles.viewSwitchBtn, viewMode === value && { backgroundColor: theme.primary }]}>
+            <Ionicons name={icon} size={16} color={viewMode === value ? '#FFFFFF' : theme.muted} />
+            <Text style={{ color: viewMode === value ? '#FFFFFF' : theme.muted, fontSize: 11, fontWeight: '700' }}>{label}</Text>
+          </TouchableOpacity>)}
+        </View>
+        <TouchableOpacity accessibilityLabel="Mở thùng rác" onPress={() => setShowTrash(true)} style={[styles.trashButton, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Ionicons name="trash-outline" size={20} color={theme.muted} />
+          <Text style={{ color: theme.muted, fontSize: 12, fontWeight: '700' }}>Thùng rác</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Error */}
@@ -249,7 +304,8 @@ export default function TasksScreen() {
       )}
 
       {/* Task List */}
-      {!loading && (
+      {!loading && viewMode === 'kanban' && <KanbanBoard tasks={tasks} theme={theme} onOpen={openEdit} onMove={handleMoveTask} movingId={movingId} refreshing={refreshing} onRefresh={() => fetchTasks(true)} />}
+      {!loading && viewMode === 'list' && (
         <ScrollView
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
@@ -295,6 +351,7 @@ export default function TasksScreen() {
                           <Text style={[styles.metaText, { color: theme.muted }]}>{task.fileDinhKem.length} file</Text>
                         </View>
                       )}
+                      {task.lapLai && task.lapLai !== 'KHONG' && <View style={styles.metaItem}><Ionicons name="repeat-outline" size={12} color={theme.primary} /><Text style={[styles.metaText, { color: theme.primary }]}>Lặp lại</Text></View>}
                     </View>
                   </View>
                   <TouchableOpacity onPress={() => handleDelete(task)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -457,6 +514,17 @@ export default function TasksScreen() {
                 </View>
               </View>
 
+              <Text style={[styles.label, { color: theme.text }]}>Lặp lại</Text>
+              <View style={styles.optionRow}>
+                {RECURRENCE_OPTIONS.map((opt) => <TouchableOpacity key={opt.value} onPress={() => setForm((f) => ({ ...f, recurrence: opt.value }))} style={[styles.optionChip, { backgroundColor: form.recurrence === opt.value ? `${theme.primary}20` : theme.background, borderColor: form.recurrence === opt.value ? theme.primary : theme.border }]}>
+                  <Ionicons name="repeat-outline" size={14} color={form.recurrence === opt.value ? theme.primary : theme.muted} />
+                  <Text style={[styles.optionText, { color: form.recurrence === opt.value ? theme.primary : theme.muted }]}>{opt.label}</Text>
+                </TouchableOpacity>)}
+              </View>
+              {form.recurrence !== 'KHONG' && !form.dueDay && <Text style={{ color: '#E11D48', fontSize: 12, marginTop: 7 }}>Công việc lặp lại cần có hạn hoàn thành.</Text>}
+
+              {editingTask && showModal && <TaskExtras key={editingTask.id} path={`/api/users/${user.id}/tasks/${editingTask.id}/checklist`} theme={theme} />}
+              {!editingTask && <Text style={{ color: theme.muted }}>Lưu công việc trước để thêm checklist.</Text>}
               {/* File attachments */}
               <Text style={[styles.label, { color: theme.text }]}>Tệp đính kèm</Text>
               <FilePicker
@@ -484,15 +552,20 @@ export default function TasksScreen() {
           </View>
         </View>
       </Modal>
+      <TaskTrash visible={showTrash} userId={user?.id} theme={theme} onClose={() => setShowTrash(false)} onChanged={() => fetchTasks()} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  pageHeader: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
+  pageHeader: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, marginBottom: 4 },
   pageTitle: { fontSize: 25, fontWeight: '800', letterSpacing: -0.5 },
+  taskToolbar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 20, marginBottom: 12 },
+  trashButton: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, minHeight: 44, borderRadius: 12, borderWidth: 1 },
+  viewSwitch: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 12, borderWidth: 1, padding: 3, maxWidth: '100%' },
+  viewSwitchBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 7, borderRadius: 9 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 8 },
   errorText: { color: '#E11D48', fontSize: 13, flex: 1 },
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },

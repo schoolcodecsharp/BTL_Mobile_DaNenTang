@@ -49,3 +49,7 @@ export async function deleteTask(userId, taskId) {
   await changeTaskReminder(userId, { id: taskId }, true).catch(reportReminderError);
   return result;
 }
+
+export const getTrashTasks = (userId) => apiFetch(`/api/users/${userId}/tasks/trash`);
+export const restoreTask = (userId, taskId) => apiFetch(`/api/users/${userId}/tasks/${taskId}/restore`, { method: 'POST' });
+export const permanentlyDeleteTask = (userId, taskId) => apiFetch(`/api/users/${userId}/tasks/${taskId}/permanent`, { method: 'DELETE' });
