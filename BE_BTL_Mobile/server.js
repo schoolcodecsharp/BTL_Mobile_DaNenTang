@@ -29,6 +29,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/users/:userId/tasks', require('./routes/tasks'));
+app.use('/api/users/:userId/tasks/:taskId/checklist', require('./routes/checklist'));
 app.use('/api/users/:userId/categories', require('./routes/categories'));
 app.use('/api/users/:userId/notifications', require('./routes/notifications'));
 app.use('/api/tasks/:taskId/reminders', require('./routes/reminders'));

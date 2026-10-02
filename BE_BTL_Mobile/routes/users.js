@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const bcrypt = require('bcryptjs');
 const { NguoiDung } = require('../models');
+const { requireAuth } = require('../middleware/auth');
 
 const router = Router();
 
@@ -37,13 +38,17 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /api/users/:id
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth.userId) !== String(req.params.id)) return res.status(403).json({ message: 'Không có quyền sửa hồ sơ này.' });
     const user = await NguoiDung.findByPk(req.params.id);
     if (!user) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
     const { fullName, email, avatarUrl } = req.body;
-    if (fullName !== undefined) user.ho_ten = fullName?.trim() || null;
+    if (fullName !== undefined) {
+      if (typeof fullName !== 'string' || fullName.trim().length > 100) return res.status(400).json({ message: 'Họ tên không hợp lệ.' });
+      user.ho_ten = fullName.trim() || null;
+    }
     if (email !== undefined) {
       const trimmedEmail = email.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
@@ -51,7 +56,12 @@ router.put('/:id', async (req, res) => {
       }
       user.email = trimmedEmail;
     }
-    if (avatarUrl !== undefined) user.anh_dai_dien = avatarUrl;
+    if (avatarUrl !== undefined) {
+      if (avatarUrl !== null && (typeof avatarUrl !== 'string' || avatarUrl.length > 255 || !/^(https?:\/\/|\/uploads\/)/.test(avatarUrl))) {
+        return res.status(400).json({ message: 'Địa chỉ ảnh đại diện không hợp lệ.' });
+      }
+      user.anh_dai_dien = avatarUrl;
+    }
     await user.save();
     return res.json(toResponse(user));
   } catch (err) {
@@ -61,8 +71,9 @@ router.put('/:id', async (req, res) => {
 });
 
 // PUT /api/users/:id/password
-router.put('/:id/password', async (req, res) => {
+router.put('/:id/password', requireAuth, async (req, res) => {
   try {
+    if (String(req.auth.userId) !== String(req.params.id)) return res.status(403).json({ message: 'Không có quyền đổi mật khẩu này.' });
     const user = await NguoiDung.findByPk(req.params.id);
     if (!user) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 

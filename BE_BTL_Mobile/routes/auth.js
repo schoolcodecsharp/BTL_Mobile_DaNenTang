@@ -48,6 +48,7 @@ router.post('/register', async (req, res) => {
       username: user.ten_dang_nhap,
       email: user.email,
       fullName: user.ho_ten,
+      avatar: user.anh_dai_dien,
     });
   } catch (err) {
     console.error('Register error:', err);
@@ -81,6 +82,7 @@ router.post('/login', async (req, res) => {
       username: user.ten_dang_nhap,
       email: user.email,
       fullName: user.ho_ten,
+      avatar: user.anh_dai_dien,
     });
   } catch (err) {
     console.error('Login error:', err);

@@ -48,6 +48,9 @@ const CongViec = sequelize.define('CongViec', {
   ngay_tao: { type: DataTypes.DATE },
   ngay_cap_nhat: { type: DataTypes.DATE },
   file_dinh_kem: { type: DataTypes.TEXT, defaultValue: null }, // JSON array of attachment URLs
+  lap_lai: { type: DataTypes.STRING(20), allowNull: false, defaultValue: 'KHONG' },
+  da_tao_lan_tiep: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  ngay_xoa: { type: DataTypes.DATE, allowNull: true },
 }, { tableName: 'cong_viec', timestamps: false });
 
 // ── NhacNho ─────────────────────────────────────────────────
@@ -68,6 +71,9 @@ const ThongBao = sequelize.define('ThongBao', {
   noi_dung: { type: DataTypes.TEXT },
   da_doc: { type: DataTypes.BOOLEAN, defaultValue: false },
   ngay_tao: { type: DataTypes.DATE },
+  nhom_id: { type: DataTypes.INTEGER },
+  cong_viec_nhom_id: { type: DataTypes.INTEGER },
+  loai: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'HE_THONG' },
 }, { tableName: 'thong_bao', timestamps: false });
 
 // ── LichSuCongViec ──────────────────────────────────────────
@@ -163,7 +169,41 @@ CongViecNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_giao_id', as: 'nguoiGiao'
 NguoiDung.hasMany(CongViecNhom, { foreignKey: 'nguoi_nhan_id', as: 'congViecsNhan' });
 CongViecNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_nhan_id', as: 'nguoiNhan' });
 
+const BuocCongViec = sequelize.define('BuocCongViec', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  cong_viec_id: { type: DataTypes.INTEGER, allowNull: false },
+  noi_dung: { type: DataTypes.STRING(200), allowNull: false },
+  hoan_thanh: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+}, { tableName: 'buoc_cong_viec', timestamps: false });
+BuocCongViec.belongsTo(CongViec, { foreignKey: 'cong_viec_id', onDelete: 'CASCADE' });
+
+const BinhLuanNhom = sequelize.define('BinhLuanNhom', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  cong_viec_nhom_id: { type: DataTypes.INTEGER, allowNull: false },
+  nguoi_dung_id: { type: DataTypes.INTEGER, allowNull: false },
+  noi_dung: { type: DataTypes.TEXT, allowNull: false },
+  ngay_tao: { type: DataTypes.DATE, allowNull: false },
+}, { tableName: 'binh_luan_nhom', timestamps: false });
+BinhLuanNhom.belongsTo(CongViecNhom, { foreignKey: 'cong_viec_nhom_id', onDelete: 'CASCADE' });
+BinhLuanNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_dung_id', as: 'tacGia', onDelete: 'CASCADE' });
+
+const NhatKyNhom = sequelize.define('NhatKyNhom', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  nhom_id: { type: DataTypes.INTEGER, allowNull: false },
+  nguoi_dung_id: { type: DataTypes.INTEGER, allowNull: false },
+  cong_viec_nhom_id: { type: DataTypes.INTEGER },
+  hanh_dong: { type: DataTypes.STRING(40), allowNull: false },
+  noi_dung: { type: DataTypes.TEXT, allowNull: false },
+  ngay_tao: { type: DataTypes.DATE, allowNull: false },
+}, { tableName: 'nhat_ky_nhom', timestamps: false });
+NhatKyNhom.belongsTo(Nhom, { foreignKey: 'nhom_id', onDelete: 'CASCADE' });
+NhatKyNhom.belongsTo(NguoiDung, { foreignKey: 'nguoi_dung_id', as: 'nguoiThucHien', onDelete: 'CASCADE' });
+NhatKyNhom.belongsTo(CongViecNhom, { foreignKey: 'cong_viec_nhom_id', as: 'congViecNhom', onDelete: 'SET NULL' });
+
 module.exports = {
+  BuocCongViec,
+  BinhLuanNhom,
+  NhatKyNhom,
   sequelize,
   NguoiDung,
   DanhMuc,

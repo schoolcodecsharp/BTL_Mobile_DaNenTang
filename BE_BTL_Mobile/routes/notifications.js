@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { ThongBao } = require('../models');
+const { requireAuth } = require('../middleware/auth');
 
 const router = Router({ mergeParams: true });
 
@@ -12,8 +13,15 @@ function toResponse(n) {
     noiDung: n.noi_dung,
     daDoc: n.da_doc,
     ngayTao: n.ngay_tao,
+    nhomId: n.nhom_id,
+    congViecNhomId: n.cong_viec_nhom_id,
+    loai: n.loai,
   };
 }
+
+router.use(requireAuth);
+router.use((req, res, next) => String(req.auth.userId) === String(req.params.userId)
+  ? next() : res.status(403).json({ message: 'Không có quyền truy cập thông báo.' }));
 
 // GET /api/users/:userId/notifications
 router.get('/', async (req, res) => {

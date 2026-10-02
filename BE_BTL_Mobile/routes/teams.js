@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { sequelize, Nhom, ThanhVienNhom, NguoiDung, CongViecNhom, ThongBao } = require('../models');
+const { sequelize, Nhom, ThanhVienNhom, NguoiDung, CongViecNhom, ThongBao, BinhLuanNhom, NhatKyNhom } = require('../models');
 const { requireAuth } = require('../middleware/auth');
 const router = Router();
 
@@ -72,6 +72,10 @@ const memberInclude = [{ model: NguoiDung, as: 'nguoiDung', attributes: USER_FIE
 const taskInclude = ['nguoiGiao', 'nguoiNhan'].map(as => ({ model: NguoiDung, as, attributes: USER_FIELDS }));
 const priorities = ['THAP', 'TRUNG_BINH', 'CAO'];
 const statuses = ['CHUA_LAM', 'DANG_LAM', 'HOAN_THANH', 'QUA_HAN'];
+async function logActivity(teamId, userId, taskId, action, content, transaction) {
+  await NhatKyNhom.create({ nhom_id: teamId, nguoi_dung_id: userId,
+    cong_viec_nhom_id: taskId || null, hanh_dong: action, noi_dung: content, ngay_tao: new Date() }, { transaction });
+}
 function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 function id(value) {
   if (!/^[1-9]\d*$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) > 2147483647) {
@@ -262,12 +266,28 @@ router.get('/:teamId/tasks', endpoint(async (req, res) => {
   });
   res.json(result);
 }));
+router.get('/:teamId/activity', endpoint(async (req, res) => {
+  const result = await inTeam(req, async (team, transaction) => {
+    const entries = await NhatKyNhom.findAll({ where: { nhom_id: team.id },
+      include: [
+        { model: NguoiDung, as: 'nguoiThucHien', attributes: USER_FIELDS },
+        { model: CongViecNhom, as: 'congViecNhom', attributes: ['id', 'tieu_de'] },
+      ], order: [['ngay_tao', 'DESC'], ['id', 'DESC']], limit: 200, transaction });
+    return entries.map(entry => ({ id: entry.id, hanhDong: entry.hanh_dong,
+      noiDung: entry.noi_dung, ngayTao: entry.ngay_tao, congViecNhomId: entry.cong_viec_nhom_id,
+      nguoiThucHien: entry.nguoiThucHien ? { id: entry.nguoiThucHien.id,
+        hoTen: entry.nguoiThucHien.ho_ten, tenDangNhap: entry.nguoiThucHien.ten_dang_nhap } : null,
+      congViec: entry.congViecNhom ? { id: entry.congViecNhom.id, tieuDe: entry.congViecNhom.tieu_de } : null }));
+  });
+  res.json(result);
+}));
 router.post('/:teamId/tasks', endpoint(async (req, res) => {
   const result = await inTeam(req, async (team, transaction) => {
     const values = taskValues(req.body);
     if (values.nguoi_nhan_id != null) await activeMember(team.id, values.nguoi_nhan_id, transaction);
     const task = await CongViecNhom.create({ ...values, nhom_id: team.id, nguoi_giao_id: req.auth.userId, trang_thai: 'CHUA_LAM', ngay_tao: new Date(), ngay_cap_nhat: new Date() }, { transaction });
     await task.reload({ include: taskInclude, transaction });
+    await logActivity(team.id, req.auth.userId, task.id, 'TAO_CONG_VIEC', `Đã tạo công việc “${task.tieu_de}”.`, transaction);
 
     // Tự động tạo thông báo khi có việc mới được giao
     const notifyUserIds = [];
@@ -297,6 +317,9 @@ router.post('/:teamId/tasks', endpoint(async (req, res) => {
         noi_dung: notifContent,
         da_doc: false,
         ngay_tao: new Date(),
+        nhom_id: team.id,
+        cong_viec_nhom_id: task.id,
+        loai: 'GIAO_VIEC_NHOM',
       }, { transaction });
     }
 
@@ -310,7 +333,10 @@ router.put('/:teamId/tasks/:taskId', endpoint(async (req, res) => {
     const values = taskValues(req.body, true);
     if (!Object.keys(values).length) fail(400, 'Không có trường công việc để cập nhật.');
     if (values.nguoi_nhan_id != null) await activeMember(team.id, values.nguoi_nhan_id, transaction);
+    const assigneeChanged = values.nguoi_nhan_id !== undefined && values.nguoi_nhan_id !== task.nguoi_nhan_id;
     await task.update({ ...values, ngay_cap_nhat: new Date() }, { transaction });
+    await logActivity(team.id, req.auth.userId, task.id, assigneeChanged ? 'GIAO_CONG_VIEC' : 'CAP_NHAT_CONG_VIEC',
+      assigneeChanged ? `Đã thay đổi người nhận công việc “${task.tieu_de}”.` : `Đã cập nhật công việc “${task.tieu_de}”.`, transaction);
   }, true);
   res.status(204).end();
 }));
@@ -320,6 +346,9 @@ router.patch('/:teamId/tasks/:taskId/status', endpoint(async (req, res) => {
     if (team.truong_nhom_id !== req.auth.userId && task.nguoi_nhan_id !== req.auth.userId) fail(403, 'Chỉ trưởng nhóm hoặc người được giao việc được cập nhật trạng thái.');
     if (!statuses.includes(req.body.trangThai)) fail(400, 'Trạng thái không hợp lệ.');
     await task.update({ trang_thai: req.body.trangThai, ngay_cap_nhat: new Date() }, { transaction });
+    await logActivity(team.id, req.auth.userId, task.id,
+      req.body.trangThai === 'HOAN_THANH' ? 'HOAN_THANH' : 'CAP_NHAT_TRANG_THAI',
+      req.body.trangThai === 'HOAN_THANH' ? `Đã hoàn thành công việc “${task.tieu_de}”.` : `Đã đổi trạng thái công việc “${task.tieu_de}”.`, transaction);
 
     // Tạo thông báo khi công việc nhóm hoàn thành
     if (req.body.trangThai === 'HOAN_THANH') {
@@ -334,6 +363,9 @@ router.patch('/:teamId/tasks/:taskId/status', endpoint(async (req, res) => {
           noi_dung: `Công việc trong nhóm "${team.ten_nhom}" đã được đánh dấu hoàn thành.`,
           da_doc: false,
           ngay_tao: new Date(),
+          nhom_id: team.id,
+          cong_viec_nhom_id: task.id,
+          loai: 'TRANG_THAI_NHOM',
         }, { transaction });
       }
     }
@@ -345,6 +377,52 @@ router.delete('/:teamId/tasks/:taskId', endpoint(async (req, res) => {
     const task = await taskInTeam(req, team, transaction);
     await task.destroy({ transaction });
   }, true);
+  res.status(204).end();
+}));
+const formatComment = comment => ({
+  id: comment.id, nguoiDungId: comment.nguoi_dung_id,
+  noiDung: comment.noi_dung, ngayTao: comment.ngay_tao,
+  tacGia: comment.tacGia ? { hoTen: comment.tacGia.ho_ten, tenDangNhap: comment.tacGia.ten_dang_nhap } : null,
+});
+router.get('/:teamId/tasks/:taskId/comments', endpoint(async (req, res) => {
+  const result = await inTeam(req, async (team, transaction) => {
+    const task = await taskInTeam(req, team, transaction);
+    const comments = await BinhLuanNhom.findAll({ where: { cong_viec_nhom_id: task.id },
+      include: [{ model: NguoiDung, as: 'tacGia', attributes: ['ho_ten', 'ten_dang_nhap'] }],
+      order: [['id', 'ASC']], transaction });
+    return comments.map(formatComment);
+  });
+  res.json(result);
+}));
+router.post('/:teamId/tasks/:taskId/comments', endpoint(async (req, res) => {
+  const content = text(req.body.noiDung, 'Bình luận', 2000, true);
+  const result = await inTeam(req, async (team, transaction) => {
+    const task = await taskInTeam(req, team, transaction);
+    const comment = await BinhLuanNhom.create({ cong_viec_nhom_id: task.id,
+      nguoi_dung_id: req.auth.userId, noi_dung: content, ngay_tao: new Date() }, { transaction });
+    await comment.reload({ include: [{ model: NguoiDung, as: 'tacGia', attributes: ['ho_ten', 'ten_dang_nhap'] }], transaction });
+    const allMembers = await ThanhVienNhom.findAll({ where: { nhom_id: team.id }, transaction });
+    const author = comment.tacGia?.ho_ten || comment.tacGia?.ten_dang_nhap || 'Một thành viên';
+    for (const member of allMembers) {
+      if (member.nguoi_dung_id === req.auth.userId) continue;
+      await ThongBao.create({ nguoi_dung_id: member.nguoi_dung_id, cong_viec_id: null,
+        nhom_id: team.id, cong_viec_nhom_id: task.id, loai: 'BINH_LUAN_NHOM',
+        tieu_de: `Bình luận mới trong “${team.ten_nhom}”`,
+        noi_dung: `${author}: ${content}`, da_doc: false, ngay_tao: new Date() }, { transaction });
+    }
+    await logActivity(team.id, req.auth.userId, task.id, 'BINH_LUAN', `Đã bình luận trong công việc “${task.tieu_de}”.`, transaction);
+    return formatComment(comment);
+  });
+  res.status(201).json(result);
+}));
+router.delete('/:teamId/tasks/:taskId/comments/:commentId', endpoint(async (req, res) => {
+  await inTeam(req, async (team, transaction) => {
+    const task = await taskInTeam(req, team, transaction);
+    const comment = await BinhLuanNhom.findOne({ where: { id: id(req.params.commentId), cong_viec_nhom_id: task.id }, transaction });
+    if (!comment) fail(404, 'Không tìm thấy bình luận.');
+    if (comment.nguoi_dung_id !== req.auth.userId && team.truong_nhom_id !== req.auth.userId) fail(403, 'Chỉ tác giả hoặc trưởng nhóm được xóa bình luận.');
+    await comment.destroy({ transaction });
+  });
   res.status(204).end();
 }));
 module.exports = router;
