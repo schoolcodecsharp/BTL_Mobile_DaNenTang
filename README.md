@@ -100,6 +100,48 @@ npm test
 
 ## Frontend (React Native / Expo)
 
+### Lịch, checklist và bình luận nhóm
+
+- Tab **Lịch** hiển thị deadline công việc cá nhân theo tháng, đánh dấu ngày có việc,
+  xem danh sách theo ngày và mở công việc để sửa. Ngày được tính theo múi giờ thiết bị.
+- Trong cửa sổ sửa công việc cá nhân, **Checklist** cho phép thêm/xóa bước,
+  đánh dấu hoàn thành và xem tiến độ. Lưu công việc mới trước khi thêm bước.
+  Các bước được lưu ngay, độc lập với nút lưu thông tin và trạng thái công việc.
+- Trong chi tiết công việc nhóm, **Bình luận nhóm** hiển thị tác giả và thời gian.
+  Chỉ thành viên nhóm được đọc/gửi; tác giả hoặc trưởng nhóm được xóa.
+  Nhấn **Làm mới bình luận** hoặc mở lại chi tiết để lấy bình luận mới.
+- API checklist: `/api/users/:userId/tasks/:taskId/checklist` (GET/POST),
+  `/:itemId` (PATCH với `hoanThanh: boolean`, DELETE), yêu cầu Bearer token của chủ việc.
+- API bình luận: `/api/teams/:teamId/tasks/:taskId/comments` (GET/POST với
+  `noiDung`), `/:commentId` (DELETE), yêu cầu Bearer token thành viên nhóm.
+- Chạy `npm run db:migrate` trong backend để áp dụng migration
+  `20261001020000-checklists-and-comments.js` trước khi dùng.
+  Migration không sửa dữ liệu cũ, có thể chạy lại khi MySQL DDL bị gián đoạn và
+  từ chối rollback để tránh mất checklist/bình luận.
+
+### Công việc lặp lại và Kanban
+
+- Công việc cá nhân có thể lặp **hằng ngày, hằng tuần hoặc hằng tháng** và bắt buộc
+  có deadline. Khi chuyển sang Hoàn thành, backend tạo đúng một kỳ tiếp theo;
+  checklist được sao chép nhưng các bước trở về trạng thái chưa hoàn thành.
+- Màn hình Công việc có nút chuyển giữa **Danh sách** và **Kanban**. Kanban gồm
+  Chưa làm, Đang làm và Hoàn thành; kéo thẻ ngang hoặc dùng nút mũi tên để đổi trạng thái.
+- Chạy `npm run db:migrate` để áp dụng migration
+  `20261001030000-recurring-tasks.js` trước khi dùng chức năng lặp lại.
+
+### Thông báo nhóm, thùng rác, nhật ký và hồ sơ
+
+- Bình luận mới tạo thông báo trong ứng dụng cho các thành viên khác. Nhấn thông báo
+  sẽ mở đúng nhóm và công việc; danh sách tự làm mới khi màn hình được focus và mỗi 30 giây.
+- Công việc cá nhân đã xóa được chuyển vào **Thùng rác**, có thể khôi phục hoặc xóa
+  vĩnh viễn. Backend tự dọn các mục đã ở trong thùng rác quá 30 ngày.
+- Chi tiết nhóm có tab **Nhật ký**, ghi người tạo, sửa, giao, đổi trạng thái, hoàn thành
+  hoặc bình luận công việc theo dòng thời gian.
+- Hồ sơ hỗ trợ tải ảnh đại diện và thay đổi tên, email, mật khẩu. Các API hồ sơ,
+  tải ảnh và thông báo yêu cầu Bearer token đúng người dùng.
+- Chạy `npm run db:migrate` để áp dụng migration
+  `20261001040000-trash-group-notifications-activity.js`.
+
 Xem [FE_BTL_Mobile/README.md](FE_BTL_Mobile/README.md) để biết chi tiết.
 
 ```powershell
@@ -111,6 +153,6 @@ npm run web                          # hoặc npm start cho mobile
 
 ## Lưu ý
 
-- API nhóm yêu cầu Bearer token trả về khi đăng nhập. Chạy `npm run migrate:groups` trong backend trước khi dùng. Xem [API nhóm và hướng dẫn test](BE_BTL_Mobile/GROUPS_API.md). Các API cá nhân cũ chưa được bảo vệ bằng token.
+- API nhóm và API cá nhân yêu cầu Bearer token trả về khi đăng nhập. Chạy `npm run db:migrate` trong backend trước khi dùng. Xem [API nhóm và hướng dẫn test](BE_BTL_Mobile/GROUPS_API.md).
 - Home/Explore tabs trên frontend hiện là template mẫu.
 - CORS mặc định cho phép `localhost:8081`. Sửa `CORS_ORIGINS` trong `.env` nếu cần.
