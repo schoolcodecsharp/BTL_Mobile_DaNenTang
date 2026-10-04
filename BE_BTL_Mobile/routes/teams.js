@@ -76,6 +76,12 @@ async function logActivity(teamId, userId, taskId, action, content, transaction)
   await NhatKyNhom.create({ nhom_id: teamId, nguoi_dung_id: userId,
     cong_viec_nhom_id: taskId || null, hanh_dong: action, noi_dung: content, ngay_tao: new Date() }, { transaction });
 }
+async function notifyTeamUser(team, userId, taskId, type, title, content, transaction) {
+  if (!userId) return;
+  await ThongBao.create({ nguoi_dung_id: userId, nhom_id: team.id,
+    cong_viec_nhom_id: taskId || null, cong_viec_id: null, loai: type,
+    tieu_de: title, noi_dung: content, da_doc: false, ngay_tao: new Date() }, { transaction });
+}
 function fail(status, message) { throw Object.assign(new Error(message), { status }); }
 function id(value) {
   if (!/^[1-9]\d*$/.test(String(value)) || !Number.isSafeInteger(Number(value)) || Number(value) > 2147483647) {
@@ -226,6 +232,8 @@ router.post('/:teamId/invite', endpoint(async (req, res) => {
     if (existing) fail(409, 'Người dùng đã là thành viên nhóm.');
     const member = await ThanhVienNhom.create({ nhom_id: team.id, nguoi_dung_id: user.id, vai_tro: 'THANH_VIEN', ngay_tham_gia: new Date() }, { transaction });
     await member.reload({ include: memberInclude, transaction });
+    await notifyTeamUser(team, user.id, null, 'THANH_VIEN_NHOM', 'Bạn đã được thêm vào nhóm',
+      `Bạn đã trở thành thành viên của nhóm “${team.ten_nhom}”.`, transaction);
     return formatMember(member);
   }, true);
   res.status(201).json(result);
@@ -239,6 +247,8 @@ router.post('/:teamId/transfer-leader', endpoint(async (req, res) => {
     await ThanhVienNhom.update({ vai_tro: 'THANH_VIEN' }, { where: { nhom_id: team.id, nguoi_dung_id: req.auth.userId }, transaction });
     await ThanhVienNhom.update({ vai_tro: 'TRUONG_NHOM' }, { where: { nhom_id: team.id, nguoi_dung_id: newId }, transaction });
     await team.update({ truong_nhom_id: newId }, { transaction });
+    await notifyTeamUser(team, newId, null, 'TRUONG_NHOM', 'Bạn trở thành trưởng nhóm',
+      `Bạn được trao quyền quản lý nhóm “${team.ten_nhom}”.`, transaction);
   }, true);
   res.json({ message: 'Chuyển trưởng nhóm thành công.' });
 }));
@@ -334,9 +344,21 @@ router.put('/:teamId/tasks/:taskId', endpoint(async (req, res) => {
     if (!Object.keys(values).length) fail(400, 'Không có trường công việc để cập nhật.');
     if (values.nguoi_nhan_id != null) await activeMember(team.id, values.nguoi_nhan_id, transaction);
     const assigneeChanged = values.nguoi_nhan_id !== undefined && values.nguoi_nhan_id !== task.nguoi_nhan_id;
+    const previousAssignee = task.nguoi_nhan_id;
+    const dueChanged = values.han_hoan_thanh !== undefined &&
+      Number(values.han_hoan_thanh) !== Number(task.han_hoan_thanh);
     await task.update({ ...values, ngay_cap_nhat: new Date() }, { transaction });
     await logActivity(team.id, req.auth.userId, task.id, assigneeChanged ? 'GIAO_CONG_VIEC' : 'CAP_NHAT_CONG_VIEC',
       assigneeChanged ? `Đã thay đổi người nhận công việc “${task.tieu_de}”.` : `Đã cập nhật công việc “${task.tieu_de}”.`, transaction);
+    if (assigneeChanged) {
+      if (task.nguoi_nhan_id !== req.auth.userId) await notifyTeamUser(team, task.nguoi_nhan_id, task.id,
+        'GIAO_VIEC_NHOM', 'Bạn được giao công việc', `“${task.tieu_de}” trong nhóm “${team.ten_nhom}”.`, transaction);
+      if (previousAssignee !== req.auth.userId) await notifyTeamUser(team, previousAssignee, task.id,
+        'DOI_NGUOI_NHAN', 'Công việc đã đổi người nhận', `Bạn không còn được giao công việc “${task.tieu_de}”.`, transaction);
+    }
+    if (dueChanged && task.nguoi_nhan_id !== req.auth.userId) await notifyTeamUser(team, task.nguoi_nhan_id, task.id,
+      'DOI_HAN_NHOM', 'Hạn hoàn thành đã thay đổi', `“${task.tieu_de}”: ${task.han_hoan_thanh
+        ? new Date(task.han_hoan_thanh).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Đã bỏ hạn hoàn thành'}.`, transaction);
   }, true);
   res.status(204).end();
 }));
@@ -345,12 +367,19 @@ router.patch('/:teamId/tasks/:taskId/status', endpoint(async (req, res) => {
     const task = await taskInTeam(req, team, transaction);
     if (team.truong_nhom_id !== req.auth.userId && task.nguoi_nhan_id !== req.auth.userId) fail(403, 'Chỉ trưởng nhóm hoặc người được giao việc được cập nhật trạng thái.');
     if (!statuses.includes(req.body.trangThai)) fail(400, 'Trạng thái không hợp lệ.');
+    if (task.trang_thai === req.body.trangThai) return;
     await task.update({ trang_thai: req.body.trangThai, ngay_cap_nhat: new Date() }, { transaction });
     await logActivity(team.id, req.auth.userId, task.id,
       req.body.trangThai === 'HOAN_THANH' ? 'HOAN_THANH' : 'CAP_NHAT_TRANG_THAI',
       req.body.trangThai === 'HOAN_THANH' ? `Đã hoàn thành công việc “${task.tieu_de}”.` : `Đã đổi trạng thái công việc “${task.tieu_de}”.`, transaction);
 
     // Tạo thông báo khi công việc nhóm hoàn thành
+    if (req.body.trangThai !== 'HOAN_THANH') {
+      const labels = { CHUA_LAM: 'Chưa làm', DANG_LAM: 'Đang làm', QUA_HAN: 'Quá hạn' };
+      const recipientId = req.auth.userId === team.truong_nhom_id ? task.nguoi_nhan_id : team.truong_nhom_id;
+      if (recipientId !== req.auth.userId) await notifyTeamUser(team, recipientId, task.id, 'TRANG_THAI_NHOM',
+        `Công việc: ${labels[req.body.trangThai]}`, `“${task.tieu_de}” trong nhóm “${team.ten_nhom}” đã đổi trạng thái.`, transaction);
+    }
     if (req.body.trangThai === 'HOAN_THANH') {
       const recipientId = req.auth.userId === team.truong_nhom_id
         ? (task.nguoi_nhan_id && task.nguoi_nhan_id !== team.truong_nhom_id ? task.nguoi_nhan_id : null)

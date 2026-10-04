@@ -18,12 +18,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardModalOverlay } from '@/components/keyboard-modal-overlay';
 import { useAuthSession } from '@/components/auth-session';
 import { FilePicker } from '@/components/file-picker';
-import { TaskExtras } from '@/components/task-extras';
 import { KanbanBoard } from '@/components/kanban-board';
 import { TaskTrash } from '@/components/task-trash';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { DEFAULT_OFFSETS, REMINDER_OPTIONS } from '@/lib/reminder-plan.cjs';
 import { createTask, deleteTask, getTasks, updateTask } from '@/lib/tasks-api';
 
 const PRIORITY_OPTIONS = [
@@ -71,6 +72,7 @@ const EMPTY_FORM = {
   categoryId: null,
   attachments: [],
   recurrence: 'KHONG',
+  reminderOffsets: DEFAULT_OFFSETS,
 };
 
 export default function TasksScreen() {
@@ -89,6 +91,7 @@ export default function TasksScreen() {
   const [formError, setFormError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [viewMode, setViewMode] = useState('list');
+  const [taskList, setTaskList] = useState('regular');
   const [movingId, setMovingId] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
 
@@ -122,12 +125,13 @@ export default function TasksScreen() {
 
   function openCreate() {
     setEditingTask(null);
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, recurrence: taskList === 'recurring' ? 'HANG_NGAY' : 'KHONG' });
     setFormError('');
     setShowModal(true);
   }
 
   const openEdit = useCallback((task) => {
+    setTaskList(task.lapLai && task.lapLai !== 'KHONG' ? 'recurring' : 'regular');
     setEditingTask(task);
     setForm({
       title: task.tieuDe,
@@ -144,6 +148,7 @@ export default function TasksScreen() {
       categoryId: task.danhMucId ?? null,
       attachments: task.fileDinhKem ?? [],
       recurrence: task.lapLai ?? 'KHONG',
+      reminderOffsets: task.nhacTruoc ?? DEFAULT_OFFSETS,
     });
     setFormError('');
     setShowModal(true);
@@ -207,6 +212,7 @@ export default function TasksScreen() {
         categoryId: form.categoryId ?? undefined,
         attachments: form.attachments.length > 0 ? form.attachments : undefined,
         recurrence: form.recurrence,
+        reminderOffsets: form.reminderOffsets,
       };
       if (editingTask) {
         await updateTask(user.id, editingTask.id, payload);
@@ -214,6 +220,7 @@ export default function TasksScreen() {
         await createTask(user.id, payload);
       }
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      setTaskList(form.recurrence === 'KHONG' ? 'regular' : 'recurring');
       closeModal();
       await fetchTasks();
     } catch (err) {
@@ -265,6 +272,10 @@ export default function TasksScreen() {
     }
   }, [fetchTasks, movingId, user]);
 
+  const recurringTasks = tasks.filter(task => task.lapLai && task.lapLai !== 'KHONG');
+  const regularTasks = tasks.filter(task => !task.lapLai || task.lapLai === 'KHONG');
+  const listedTasks = taskList === 'recurring' ? recurringTasks : regularTasks;
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: theme.background }]}>
       {/* Header */}
@@ -273,6 +284,19 @@ export default function TasksScreen() {
           <Text style={[styles.eyebrow, { color: theme.muted }]}>CÁ NHÂN</Text>
           <Text style={[styles.pageTitle, { color: theme.text }]}>Công việc của tôi</Text>
         </View>
+      </View>
+      <View style={[styles.taskToolbar, { gap: 8 }]}>
+        {[
+          ['regular', 'clipboard-outline', 'Công việc', regularTasks.length],
+          ['recurring', 'repeat-outline', 'Lặp lại', recurringTasks.length],
+        ].map(([value, icon, label, count]) => <TouchableOpacity key={value}
+          accessibilityRole="tab" accessibilityState={{ selected: taskList === value }}
+          onPress={() => setTaskList(value)}
+          style={[styles.viewSwitchBtn, { flex: 1, borderRadius: 12, paddingVertical: 12,
+            backgroundColor: taskList === value ? theme.primary : theme.surface }]}>
+          <Ionicons name={icon} size={18} color={taskList === value ? '#FFFFFF' : theme.muted} />
+          <Text style={{ color: taskList === value ? '#FFFFFF' : theme.text, fontWeight: '700' }}>{label} ({count})</Text>
+        </TouchableOpacity>)}
       </View>
       <View style={styles.taskToolbar}>
         <View style={[styles.viewSwitch, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -304,20 +328,20 @@ export default function TasksScreen() {
       )}
 
       {/* Task List */}
-      {!loading && viewMode === 'kanban' && <KanbanBoard tasks={tasks} theme={theme} onOpen={openEdit} onMove={handleMoveTask} movingId={movingId} refreshing={refreshing} onRefresh={() => fetchTasks(true)} />}
+      {!loading && viewMode === 'kanban' && <KanbanBoard tasks={listedTasks} theme={theme} onOpen={openEdit} onMove={handleMoveTask} movingId={movingId} refreshing={refreshing} onRefresh={() => fetchTasks(true)} />}
       {!loading && viewMode === 'list' && (
         <ScrollView
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchTasks(true)} tintColor={theme.primary} />}>
-          {tasks.length === 0 ? (
+          {listedTasks.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <Ionicons name="clipboard-outline" size={42} color={theme.muted} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>Chưa có công việc nào</Text>
-              <Text style={[styles.emptyText, { color: theme.muted }]}>Nhấn nút + để tạo công việc đầu tiên.</Text>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>{taskList === 'recurring' ? 'Chưa có công việc lặp lại' : 'Chưa có công việc làm một lần'}</Text>
+              <Text style={[styles.emptyText, { color: theme.muted }]}>{taskList === 'recurring' ? 'Nhấn + để tạo công việc hằng ngày, hằng tuần hoặc hằng tháng.' : 'Nhấn nút + để tạo công việc đầu tiên.'}</Text>
             </View>
           ) : (
-            tasks.map((task) => {
+            listedTasks.map((task) => {
               const color = STATUS_COLORS[task.trangThai] ?? '#6366F1';
               return (
                 <TouchableOpacity
@@ -351,7 +375,7 @@ export default function TasksScreen() {
                           <Text style={[styles.metaText, { color: theme.muted }]}>{task.fileDinhKem.length} file</Text>
                         </View>
                       )}
-                      {task.lapLai && task.lapLai !== 'KHONG' && <View style={styles.metaItem}><Ionicons name="repeat-outline" size={12} color={theme.primary} /><Text style={[styles.metaText, { color: theme.primary }]}>Lặp lại</Text></View>}
+                      {task.lapLai && task.lapLai !== 'KHONG' && <View style={styles.metaItem}><Ionicons name="repeat-outline" size={12} color={theme.primary} /><Text style={[styles.metaText, { color: theme.primary }]}>{RECURRENCE_OPTIONS.find(option => option.value === task.lapLai)?.label || 'Lặp lại'}</Text></View>}
                     </View>
                   </View>
                   <TouchableOpacity onPress={() => handleDelete(task)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -375,7 +399,7 @@ export default function TasksScreen() {
 
       {/* Create / Edit Modal */}
       <Modal visible={showModal} animationType="slide" transparent presentationStyle="overFullScreen">
-        <View style={styles.modalOverlay}>
+        <KeyboardModalOverlay>
           <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
             {/* Modal Header */}
             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
@@ -514,6 +538,27 @@ export default function TasksScreen() {
                 </View>
               </View>
 
+              <Text style={[styles.label, { color: theme.text }]}>Nhắc trước hạn</Text>
+              <View style={styles.optionRow}>
+                {REMINDER_OPTIONS.map(option => {
+                  const selected = form.reminderOffsets.includes(option.minutes);
+                  return <TouchableOpacity key={option.key} accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected, disabled: !form.dueDay }} disabled={!form.dueDay}
+                    onPress={() => setForm(current => ({ ...current, reminderOffsets: selected
+                      ? current.reminderOffsets.filter(value => value !== option.minutes)
+                      : [...current.reminderOffsets, option.minutes] }))}
+                    style={[styles.optionChip, { borderColor: selected ? theme.primary : theme.border,
+                      backgroundColor: selected ? `${theme.primary}20` : theme.background, opacity: form.dueDay ? 1 : 0.5 }]}>
+                    <Ionicons name={selected ? 'checkbox-outline' : 'square-outline'} size={16} color={theme.primary} />
+                    <Text style={[styles.optionText, { color: theme.text }]}>{option.label}</Text>
+                  </TouchableOpacity>;
+                })}
+              </View>
+              <Text style={{ color: theme.muted, fontSize: 12, marginTop: 8 }}>
+                {!form.dueDay ? 'Đặt hạn hoàn thành để chọn lịch nhắc.' : form.reminderOffsets.length
+                  ? 'Chọn nhiều mốc. Mốc đã qua sẽ bỏ qua. Lựa chọn chỉ lưu trên thiết bị này.'
+                  : 'Đã tắt nhắc cho công việc này.'}
+              </Text>
               <Text style={[styles.label, { color: theme.text }]}>Lặp lại</Text>
               <View style={styles.optionRow}>
                 {RECURRENCE_OPTIONS.map((opt) => <TouchableOpacity key={opt.value} onPress={() => setForm((f) => ({ ...f, recurrence: opt.value }))} style={[styles.optionChip, { backgroundColor: form.recurrence === opt.value ? `${theme.primary}20` : theme.background, borderColor: form.recurrence === opt.value ? theme.primary : theme.border }]}>
@@ -523,8 +568,6 @@ export default function TasksScreen() {
               </View>
               {form.recurrence !== 'KHONG' && !form.dueDay && <Text style={{ color: '#E11D48', fontSize: 12, marginTop: 7 }}>Công việc lặp lại cần có hạn hoàn thành.</Text>}
 
-              {editingTask && showModal && <TaskExtras key={editingTask.id} path={`/api/users/${user.id}/tasks/${editingTask.id}/checklist`} theme={theme} />}
-              {!editingTask && <Text style={{ color: theme.muted }}>Lưu công việc trước để thêm checklist.</Text>}
               {/* File attachments */}
               <Text style={[styles.label, { color: theme.text }]}>Tệp đính kèm</Text>
               <FilePicker
@@ -550,7 +593,7 @@ export default function TasksScreen() {
               </TouchableOpacity>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardModalOverlay>
       </Modal>
       <TaskTrash visible={showTrash} userId={user?.id} theme={theme} onClose={() => setShowTrash(false)} onChanged={() => fetchTasks()} />
     </SafeAreaView>
@@ -586,7 +629,6 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 11.5 },
   fab: { position: 'absolute', right: 21, bottom: 18, width: 58, height: 58, borderRadius: 19, backgroundColor: '#5B5CE2', justifyContent: 'center', alignItems: 'center', shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 7 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1 },
   modalTitle: { fontSize: 18, fontWeight: '800' },

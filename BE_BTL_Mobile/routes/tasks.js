@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { Op } = require('sequelize');
-const { sequelize, CongViec, DanhMuc, BuocCongViec } = require('../models');
+const { sequelize, CongViec, DanhMuc } = require('../models');
 const { VALID_RECURRENCES, nextOccurrence } = require('../lib/recurrence');
 
 const router = Router({ mergeParams: true });
@@ -212,17 +212,13 @@ router.put('/:id', async (req, res) => {
         const nextDue = nextOccurrence(task.han_hoan_thanh, task.lap_lai);
         if (!nextDue) throw new Error('Recurring task is missing a valid due date.');
         const nextStart = task.ngay_bat_dau ? nextOccurrence(task.ngay_bat_dau, task.lap_lai) : null;
-        const nextTask = await CongViec.create({
+        await CongViec.create({
           nguoi_dung_id: task.nguoi_dung_id, danh_muc_id: task.danh_muc_id,
           tieu_de: task.tieu_de, mo_ta: task.mo_ta, muc_do_uu_tien: task.muc_do_uu_tien,
           trang_thai: 'CHUA_LAM', ngay_bat_dau: nextStart, han_hoan_thanh: nextDue,
           ngay_hoan_thanh: null, ngay_tao: new Date(), ngay_cap_nhat: new Date(),
           file_dinh_kem: task.file_dinh_kem, lap_lai: task.lap_lai, da_tao_lan_tiep: false,
         }, { transaction });
-        const steps = await BuocCongViec.findAll({ where: { cong_viec_id: task.id }, transaction });
-        if (steps.length) await BuocCongViec.bulkCreate(steps.map(step => ({
-          cong_viec_id: nextTask.id, noi_dung: step.noi_dung, hoan_thanh: false,
-        })), { transaction });
       }
       return true;
     });

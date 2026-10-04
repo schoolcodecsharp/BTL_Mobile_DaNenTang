@@ -27,7 +27,7 @@ function harness({ granted = true, platform = 'android', expoGo = false } = {}) 
     .replace(/^import .*;\r?\n/gm, '')
     .replace(/export /g, '')
     .replace("await import('expo-notifications')", 'loadNotifications()');
-  source += '\nmodule.exports = { activateReminders, stopReminders, setRemindersEnabled, syncTaskReminders, changeTaskReminder, reminderRevision, notificationsModule };';
+  source += '\nmodule.exports = { activateReminders, stopReminders, setRemindersEnabled, syncTaskReminders, changeTaskReminder, reminderRevision, notificationsModule, sendTestReminder, saveTaskReminderOptions };';
   const context = { module: { exports: {} }, PREFIX, buildReminderPlan, mockNotifications: n,
     Platform: { OS: platform }, Alert: { alert() {} }, console,
     Constants: { executionEnvironment: expoGo ? 'storeClient' : 'bare' },
@@ -126,4 +126,31 @@ test('four distinct milestones and safe migration from the previous single remin
   assert.equal(h.calls.filter(c => typeof c === 'object').length, 4);
   await h.changeTaskReminder(7, { ...a, trangThai: 'HOAN_THANH' });
   assert.equal(h.pending.size, 0);
+});
+
+test('test reminder schedules locally ten seconds ahead and refuses denied permission', async () => {
+  const h = harness();
+  const before = Date.now();
+  await h.sendTestReminder();
+  const scheduled = h.calls.find(item => typeof item === 'object');
+  assert.equal(scheduled.trigger.channelId, 'task-reminders');
+  assert.ok(scheduled.trigger.date.getTime() >= before + 10000);
+  const denied = harness({ granted: false });
+  await assert.rejects(denied.sendTestReminder(), /quyền thông báo/);
+  assert.equal(denied.pending.size, 0);
+});
+
+test('per-task reminder choices survive resync and an empty choice cancels all reminders', async () => {
+ const h = harness(); await h.activateReminders(7);
+ const a = task(99, 120);
+ await h.saveTaskReminderOptions(7, a.id, [30, 5, 0]);
+ await sync(h, [a]);
+ assert.equal(h.pending.size, 3);
+ assert.ok(h.pending.has(PREFIX + '7:99:halfHour'));
+ assert.ok(h.pending.has(PREFIX + '7:99:five'));
+ await sync(h, [a]);
+ assert.equal(h.calls.filter(c => typeof c === 'object').length, 3);
+ await h.saveTaskReminderOptions(7, a.id, []);
+ await sync(h, [a]);
+ assert.equal(h.pending.size, 0);
 });

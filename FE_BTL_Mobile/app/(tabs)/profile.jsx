@@ -18,8 +18,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardModalOverlay } from '@/components/keyboard-modal-overlay';
 import { useAuthSession } from '@/components/auth-session';
 import { useTaskReminders } from '@/components/task-reminder-provider';
+import { sendTestReminder } from '@/lib/task-reminders';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getTasks } from '@/lib/tasks-api';
 import { changeUserPassword, updateUserProfile } from '@/lib/users-api';
@@ -190,7 +192,17 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.menuCopy}>
               <Text style={[styles.menuTitle, { color: theme.text }]}>Thông báo</Text>
-              <Text style={[styles.menuSubtitle, { color: theme.muted }]}>Nhắc trước hạn 10 phút trên điện thoại</Text>
+              <Text style={[styles.menuSubtitle, { color: theme.muted }]}>Nhắc trước 1 ngày, 1 giờ, 10 phút và đúng hạn</Text>
+              <TouchableOpacity accessibilityRole="button" onPress={async () => {
+                try {
+                  await sendTestReminder();
+                  Alert.alert('Đã đặt thông báo thử', 'Thông báo sẽ xuất hiện sau 10 giây. Nếu không thấy, kiểm tra quyền thông báo và quyền Báo thức & lời nhắc trong Cài đặt Android.');
+                } catch (err) {
+                  Alert.alert('Chưa gửi được thông báo thử', `${err.message}\nKiểm tra quyền Thông báo và Báo thức & lời nhắc trong Cài đặt Android.`);
+                }
+              }} style={{ paddingVertical: 8 }}>
+                <Text style={{ color: theme.primary, fontWeight: '600' }}>Thử thông báo sau 10 giây</Text>
+              </TouchableOpacity>
             </View>
             <Switch
               disabled={notificationsDisabled} value={notificationsEnabled}
@@ -405,7 +417,7 @@ function EditProfileModal({ visible, user, theme, onClose, onUpdated }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Chỉnh sửa hồ sơ</Text>
@@ -457,7 +469,7 @@ function EditProfileModal({ visible, user, theme, onClose, onUpdated }) {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -507,7 +519,7 @@ function ChangePasswordModal({ visible, userId, theme, onClose, onSuccess }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Đổi mật khẩu</Text>
@@ -574,7 +586,7 @@ function ChangePasswordModal({ visible, userId, theme, onClose, onSuccess }) {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -585,7 +597,7 @@ function ChangePasswordModal({ visible, userId, theme, onClose, onSuccess }) {
 function HelpModal({ visible, theme, onClose }) {
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Trợ giúp & Thông tin</Text>
@@ -593,7 +605,7 @@ function HelpModal({ visible, theme, onClose }) {
               <Ionicons name="close" size={24} color={theme.muted} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {/* App overview */}
             <View style={[styles.helpBox, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -652,7 +664,7 @@ function HelpModal({ visible, theme, onClose }) {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -690,7 +702,6 @@ const styles = StyleSheet.create({
   logoutText: { color: '#E11D48', fontSize: 14, fontWeight: '700' },
   version: { textAlign: 'center', fontSize: 11, marginTop: 18 },
   // Modal styles
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1 },
   modalTitle: { fontSize: 18, fontWeight: '800' },

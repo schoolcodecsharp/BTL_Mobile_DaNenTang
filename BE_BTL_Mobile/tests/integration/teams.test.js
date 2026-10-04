@@ -40,7 +40,9 @@ test('Teams API with real MySQL', { timeout: 120000 }, async t => {
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       const raw = await response.text();
-      return { status: response.status, body: raw ? JSON.parse(raw) : null };
+      let parsed = null;
+      if (raw) { try { parsed = JSON.parse(raw); } catch { parsed = raw; } }
+      return { status: response.status, body: parsed };
     };
     const expect = async (method, path, token, body, status) => {
       const response = await request(method, path, token, body);
@@ -182,30 +184,19 @@ test('Teams API with real MySQL', { timeout: 120000 }, async t => {
       const leaders = await ThanhVienNhom.findAll({ where: { nhom_id: teamId, vai_tro: 'TRUONG_NHOM' } });
       assert.deepEqual(leaders.map(m => m.nguoi_dung_id), [member.id]);
     });
-    await t.test('checklist ownership plus trash restore and permanent deletion', async () => {
-      const task = await expect('POST', `/api/users/${owner.id}/tasks`, owner.token, { title: 'Checklist test' }, 201);
+    await t.test('checklist is removed; trash restore and permanent deletion still work', async () => {
+      const task = await expect('POST', `/api/users/${owner.id}/tasks`, owner.token, { title: 'Trash test' }, 201);
       const path = `/api/users/${owner.id}/tasks/${task.id}/checklist`;
-      await expect('GET', path, null, undefined, 401);
-      await expect('GET', path, outsider.token, undefined, 403);
-      await expect('POST', path, owner.token, { noiDung: ' ' }, 400);
-      const item = await expect('POST', path, owner.token, { noiDung: ' Prepare demo ' }, 201);
-      assert.equal(item.noiDung, 'Prepare demo');
-      await expect('PATCH', `${path}/${item.id}`, owner.token, { hoanThanh: 'true' }, 400);
-      await expect('PATCH', `${path}/${item.id}`, owner.token, { hoanThanh: true }, 200);
-      assert.equal((await expect('GET', path, owner.token, undefined, 200))[0].hoanThanh, true);
-      const other = await expect('POST', `/api/users/${owner.id}/tasks`, owner.token, { title: 'Other' }, 201);
-      await expect('DELETE', `/api/users/${owner.id}/tasks/${other.id}/checklist/${item.id}`, owner.token, undefined, 404);
-      await expect('DELETE', `${path}/${item.id}`, owner.token, undefined, 204);
-      await expect('POST', path, owner.token, { noiDung: 'Cascade step' }, 201);
+      for (const method of ['GET', 'POST', 'PATCH', 'DELETE']) {
+        await expect(method, path, owner.token, undefined, 404);
+      }
       await expect('DELETE', `/api/users/${owner.id}/tasks/${task.id}`, owner.token, undefined, 204);
       assert.equal((await expect('GET', `/api/users/${owner.id}/tasks`, owner.token, undefined, 200)).some(t => t.id === task.id), false);
       assert.equal((await expect('GET', `/api/users/${owner.id}/tasks/trash`, owner.token, undefined, 200)).some(t => t.id === task.id), true);
-      assert.equal(await models.BuocCongViec.count({ where: { cong_viec_id: task.id } }), 1);
       await expect('POST', `/api/users/${owner.id}/tasks/${task.id}/restore`, owner.token, undefined, 200);
       assert.equal((await expect('GET', `/api/users/${owner.id}/tasks`, owner.token, undefined, 200)).some(t => t.id === task.id), true);
       await expect('DELETE', `/api/users/${owner.id}/tasks/${task.id}`, owner.token, undefined, 204);
       await expect('DELETE', `/api/users/${owner.id}/tasks/${task.id}/permanent`, owner.token, undefined, 204);
-      assert.equal(await models.BuocCongViec.count({ where: { cong_viec_id: task.id } }), 0);
     });
     await t.test('comments enforce membership, authorship and task scope', async () => {
       const path = `/api/teams/${teamId}/tasks/${taskId}/comments`;
@@ -244,7 +235,7 @@ test('Teams API with real MySQL', { timeout: 120000 }, async t => {
         assert.ok(new Date(timeline[i - 1].ngayTao) >= new Date(timeline[i].ngayTao));
       }
     });
-    await t.test('recurring tasks create exactly one next occurrence with a reset checklist', async () => {
+    await t.test('recurring tasks create exactly one next occurrence without copying retired checklist data', async () => {
       await expect('POST', `/api/users/${owner.id}/tasks`, owner.token,
         { title: 'Missing due date', recurrence: 'HANG_NGAY' }, 400);
       await expect('POST', `/api/users/${owner.id}/tasks`, owner.token,
@@ -252,10 +243,7 @@ test('Teams API with real MySQL', { timeout: 120000 }, async t => {
       const recurring = await expect('POST', `/api/users/${owner.id}/tasks`, owner.token, {
         title: 'Daily review', recurrence: 'HANG_NGAY', dueDate: '2026-10-01T08:00:00.000Z',
       }, 201);
-      const step = await expect('POST', `/api/users/${owner.id}/tasks/${recurring.id}/checklist`, owner.token,
-        { noiDung: 'Review notes' }, 201);
-      await expect('PATCH', `/api/users/${owner.id}/tasks/${recurring.id}/checklist/${step.id}`, owner.token,
-        { hoanThanh: true }, 200);
+      await models.BuocCongViec.create({ cong_viec_id: recurring.id, noi_dung: 'Legacy step', hoan_thanh: true });
       const completedPayload = {
         title: recurring.tieuDe, description: recurring.moTa, priority: recurring.mucDoUuTien,
         status: 'HOAN_THANH', dueDate: recurring.hanHoanThanh, recurrence: recurring.lapLai,
@@ -267,23 +255,55 @@ test('Teams API with real MySQL', { timeout: 120000 }, async t => {
       const next = occurrences.find(item => item.id !== recurring.id);
       assert.equal(next.lapLai, 'HANG_NGAY');
       assert.equal(new Date(next.hanHoanThanh).toISOString(), '2026-10-02T08:00:00.000Z');
-      const nextSteps = await expect('GET', `/api/users/${owner.id}/tasks/${next.id}/checklist`, owner.token, undefined, 200);
-      assert.deepEqual(nextSteps.map(item => [item.noiDung, item.hoanThanh]), [['Review notes', false]]);
+      assert.equal(await models.BuocCongViec.count({ where: { cong_viec_id: next.id } }), 0);
+      assert.equal(await models.BuocCongViec.count({ where: { cong_viec_id: recurring.id } }), 1);
       await expect('PUT', `/api/users/${owner.id}/tasks/${recurring.id}`, owner.token, completedPayload, 204);
       occurrences = (await expect('GET', `/api/users/${owner.id}/tasks`, owner.token, undefined, 200))
         .filter(item => item.tieuDe === 'Daily review');
       assert.equal(occurrences.length, 2);
     });
     await t.test('task/group deletion cleans child rows', async () => {
+      await expect('DELETE', `/api/teams/${teamId}`, owner.token, undefined, 403);
+      assert.ok(await Nhom.findByPk(teamId));
       await expect('DELETE', `/api/teams/${teamId}/tasks/${taskId}`, member.token, undefined, 204);
       assert.equal(await CongViecNhom.findByPk(taskId), null);
       assert.equal(await models.BinhLuanNhom.count({ where: { cong_viec_nhom_id: taskId } }), 0);
-      await expect('POST', `/api/teams/${teamId}/tasks`, member.token, { tieuDe: 'Cascade test' }, 201);
+      const cascadeTask = await expect('POST', `/api/teams/${teamId}/tasks`, member.token,
+        { tieuDe: 'Cascade test', nguoiNhanId: owner.id }, 201);
+      await expect('POST', `/api/teams/${teamId}/tasks/${cascadeTask.id}/comments`, owner.token,
+        { noiDung: 'Comment deleted with group' }, 201);
+      assert.ok(await models.ThongBao.count({ where: { nhom_id: teamId } }));
+      assert.ok(await models.NhatKyNhom.count({ where: { nhom_id: teamId } }));
       await expect('DELETE', `/api/teams/${teamId}`, member.token, undefined, 204);
       assert.equal(await CongViecNhom.count({ where: { nhom_id: teamId } }), 0);
       assert.equal(await ThanhVienNhom.count({ where: { nhom_id: teamId } }), 0);
       assert.equal(await Nhom.findByPk(teamId), null);
+      assert.equal(await models.BinhLuanNhom.count({ where: { cong_viec_nhom_id: cascadeTask.id } }), 0);
+      assert.equal(await models.ThongBao.count({ where: { nhom_id: teamId } }), 0);
+      assert.equal(await models.NhatKyNhom.count({ where: { nhom_id: teamId } }), 0);
+      assert.deepEqual(await expect('GET', '/api/teams', member.token, undefined, 200), []);
+      await expect('GET', `/api/teams/${teamId}`, member.token, undefined, 404);
+      await expect('DELETE', `/api/teams/${teamId}`, member.token, undefined, 404);
       assert.ok(await Nhom.findByPk(otherTeamId));
+    });
+    await t.test('membership, reassignment, deadlines and status events notify recipients once', async () => {
+      const team = await expect('POST', '/api/teams', owner.token, { tenNhom: 'Events' }, 201);
+      await expect('POST', '/api/teams/' + team.id + '/invite', owner.token, { inviteEmail: member.email }, 201);
+      const task = await expect('POST', '/api/teams/' + team.id + '/tasks', owner.token, { tieuDe: 'Event task' }, 201);
+      const path = '/api/teams/' + team.id + '/tasks/' + task.id;
+      await expect('PUT', path, owner.token, { nguoiNhanId: member.id, hanHoanThanh: '2027-01-01T08:00:00.000Z' }, 204);
+      const notices = await models.ThongBao.findAll({ where: { nhom_id: team.id, nguoi_dung_id: member.id } });
+      for (const type of ['THANH_VIEN_NHOM', 'GIAO_VIEC_NHOM', 'DOI_HAN_NHOM']) assert.ok(notices.some(n => n.loai === type));
+      await expect('PATCH', path + '/status', member.token, { trangThai: 'DANG_LAM' }, 204);
+      const count = await models.ThongBao.count({ where: { nhom_id: team.id, nguoi_dung_id: owner.id, loai: 'TRANG_THAI_NHOM' } });
+      assert.equal(count, 1);
+      await expect('PATCH', path + '/status', member.token, { trangThai: 'DANG_LAM' }, 204);
+      assert.equal(await models.ThongBao.count({ where: { nhom_id: team.id, nguoi_dung_id: owner.id, loai: 'TRANG_THAI_NHOM' } }), count);
+      await expect('PUT', path, owner.token, { nguoiNhanId: null }, 204);
+      assert.equal(await models.ThongBao.count({ where: { nhom_id: team.id, nguoi_dung_id: member.id, loai: 'DOI_NGUOI_NHAN' } }), 1);
+      await expect('POST', '/api/teams/' + team.id + '/transfer-leader', owner.token, { newLeaderId: member.id }, 200);
+      assert.equal(await models.ThongBao.count({ where: { nhom_id: team.id, nguoi_dung_id: member.id, loai: 'TRUONG_NHOM' } }), 1);
+      await expect('DELETE', '/api/teams/' + team.id, member.token, undefined, 204);
     });
     await t.test('expired/revoked/disabled sessions are rejected', async () => {
       await PhienDangNhap.update({ het_han: new Date(Date.now() - 1000) }, { where: { nguoi_dung_id: owner.id } });

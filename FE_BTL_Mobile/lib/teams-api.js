@@ -24,6 +24,11 @@ export async function getTeamDetail(teamId) {
   return apiFetch(`/api/teams/${teamId}`);
 }
 
+/** Xóa nhóm và dữ liệu liên quan (chỉ trưởng nhóm). */
+export async function deleteTeam(teamId) {
+  return apiFetch(`/api/teams/${teamId}`, { method: 'DELETE', body: {} });
+}
+
 /**
  * Mời thành viên vào nhóm (chỉ trưởng nhóm).
  * @param {number} teamId

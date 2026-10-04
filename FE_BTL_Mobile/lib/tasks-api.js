@@ -1,5 +1,5 @@
 import { apiFetch } from './api';
-import { changeTaskReminder, reminderRevision, reportReminderError, syncTaskReminders } from './task-reminders';
+import { changeTaskReminder, reminderRevision, reportReminderError, syncTaskReminders, readTaskReminderOptions, saveTaskReminderOptions } from './task-reminders';
 
 /**
  * Lấy danh sách công việc của user.
@@ -8,8 +8,9 @@ import { changeTaskReminder, reminderRevision, reportReminderError, syncTaskRemi
 export async function getTasks(userId) {
   const revision = reminderRevision();
   const tasks = await apiFetch(`/api/users/${userId}/tasks`);
+  const options = await readTaskReminderOptions(userId);
   await syncTaskReminders(userId, tasks ?? [], revision).catch(reportReminderError);
-  return tasks;
+  return (tasks ?? []).map(task => ({ ...task, nhacTruoc: options[String(task.id)] }));
 }
 
 /**
@@ -19,6 +20,7 @@ export async function getTasks(userId) {
  */
 export async function createTask(userId, payload) {
   const task = await apiFetch(`/api/users/${userId}/tasks`, { method: 'POST', body: payload });
+  if (Array.isArray(payload.reminderOffsets)) await saveTaskReminderOptions(userId, task.id, payload.reminderOffsets).catch(reportReminderError);
   await changeTaskReminder(userId, task).catch(reportReminderError);
   return task;
 }
@@ -31,6 +33,7 @@ export async function createTask(userId, payload) {
  */
 export async function updateTask(userId, taskId, payload) {
   const result = await apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'PUT', body: payload });
+  if (Array.isArray(payload.reminderOffsets)) await saveTaskReminderOptions(userId, taskId, payload.reminderOffsets).catch(reportReminderError);
   // The update endpoint returns 204; use its replacement payload for the reminder.
   await changeTaskReminder(userId, {
     id: taskId, tieuDe: payload.title, hanHoanThanh: payload.dueDate,

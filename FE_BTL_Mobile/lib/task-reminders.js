@@ -15,6 +15,18 @@ export const remindersSupported = Platform.OS !== 'web' && !(
   Platform.OS === 'android' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient
 );
 const preferenceKey = (id) => `task-reminders-enabled:${id}`;
+const taskPreferencesKey = (id) => `task-reminder-options:${id}`;
+
+export async function readTaskReminderOptions(userId) {
+  return JSON.parse(await AsyncStorage.getItem(taskPreferencesKey(userId)) || '{}');
+}
+export function saveTaskReminderOptions(userId, taskId, offsets) {
+  return serial(async () => {
+    const options = await readTaskReminderOptions(userId);
+    options[String(taskId)] = offsets;
+    await AsyncStorage.setItem(taskPreferencesKey(userId), JSON.stringify(options));
+  });
+}
 
 export function getReminderState() { return enabled; }
 export function reminderRevision() { return revision; }
@@ -62,7 +74,10 @@ async function permission(request) {
 async function reconcile() {
   const n = await notificationsModule();
   if (!n) return;
-  const planned = enabled && owner ? buildReminderPlan(owner, tasks) : [];
+  const options = owner ? await readTaskReminderOptions(owner) : {};
+  const planned = enabled && owner ? buildReminderPlan(owner, tasks.map(task => ({
+    ...task, nhacTruoc: options[String(task.id)] ?? task.nhacTruoc,
+  }))) : [];
   const desired = new Map(planned.map((item) => [item.identifier, item]));
   const records = JSON.parse(await AsyncStorage.getItem('task-reminders-armed') || '{}');
   for (const [id, record] of Object.entries(records)) {
@@ -105,6 +120,18 @@ export function refreshReminderPermission() {
     const preference = await AsyncStorage.getItem(preferenceKey(owner));
     publish(preference !== 'false' && await permission(false));
     if (!enabled) await reconcile();
+  });
+}
+
+export async function sendTestReminder() {
+  if (!remindersSupported) throw new Error('Hãy dùng bản APK để thử thông báo trên Android.');
+  if (!await permission(true)) {
+    throw new Error('Hãy bật quyền thông báo cho ứng dụng trong Cài đặt của điện thoại.');
+  }
+  const n = await notificationsModule();
+  await n.scheduleNotificationAsync({
+    content: { title: 'Thử nhắc công việc', body: 'Điện thoại đã nhận được thông báo nhắc.', sound: 'default' },
+    trigger: { type: n.SchedulableTriggerInputTypes.DATE, date: new Date(Date.now() + 10000), channelId: 'task-reminders' },
   });
 }
 

@@ -2,7 +2,7 @@ import { NotificationInbox } from '@/components/notification-inbox';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -62,6 +62,8 @@ export default function HomeScreen() {
   const [error, setError] = useState('');
   const [selectedTask, setSelectedTask] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  const statusRequestPending = useRef(false);
+  const [savingTaskKey, setSavingTaskKey] = useState(null);
   const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
@@ -116,10 +118,12 @@ export default function HomeScreen() {
 
   useFocusEffect(useCallback(() => { void fetchTasks(); }, [fetchTasks]));
 
-  const changeStatus = async (newStatus) => {
-    const task = selectedTask;
-    if (!user?.id || !task || savingStatus) return;
+  const changeStatus = async (newStatus, task = selectedTask) => {
+    if (!user?.id || !task || statusRequestPending.current) return;
+    if (task.teamId && !task.canChangeStatus) return;
     if (task.trangThai === newStatus) { setSelectedTask(null); return; }
+    statusRequestPending.current = true;
+    setSavingTaskKey(`${task.teamId || 'personal'}:${task.id}`);
     setSavingStatus(true);
     try {
       if (task.teamId) {
@@ -132,14 +136,20 @@ export default function HomeScreen() {
         categoryId: task.danhMucId,
         startDate: task.ngayBatDau,
         dueDate: task.hanHoanThanh,
+        recurrence: task.lapLai ?? 'KHONG',
       });
       setTasks((prev) => prev.map((t) => t.id === task.id && t.teamId === task.teamId ? { ...t, trangThai: newStatus } : t));
       setSelectedTask(null);
       void Haptics.selectionAsync().catch(() => {});
+      if (!task.teamId && task.lapLai && task.lapLai !== 'KHONG' && newStatus === 'HOAN_THANH') {
+        void fetchTasks(true);
+      }
     } catch (err) {
       Alert.alert('Chưa đổi được trạng thái', err.message || 'Vui lòng thử lại.');
     } finally {
       setSavingStatus(false);
+      setSavingTaskKey(null);
+      statusRequestPending.current = false;
     }
   };
 
@@ -263,9 +273,25 @@ export default function HomeScreen() {
                   accessibilityLabel={`${task.tieuDe}. ${status.label}. Đổi trạng thái`}
                   style={[styles.taskCard, { backgroundColor: isDark ? `${status.color}18` : `${status.color}0D`, borderColor: `${status.color}55` }]}>
                   <View style={[styles.categoryBar, { backgroundColor: status.color }]} />
-                  <View style={[styles.checkButton, { borderColor: done ? '#10B981' : theme.border, backgroundColor: done ? '#10B981' : 'transparent' }]}>
-                    {done && <Ionicons name="checkmark" size={15} color="#FFFFFF" />}
-                  </View>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={`Hoàn thành công việc ${task.tieuDe}`}
+                    accessibilityState={{ checked: done, disabled: savingStatus || (Boolean(task.teamId) && !task.canChangeStatus) }}
+                    disabled={savingStatus || (Boolean(task.teamId) && !task.canChangeStatus)}
+                    hitSlop={10}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      void changeStatus('HOAN_THANH', task);
+                    }}
+                    style={[styles.checkButton, {
+                      borderColor: done ? '#10B981' : theme.primary,
+                      backgroundColor: done ? '#10B981' : theme.surface,
+                      opacity: task.teamId && !task.canChangeStatus ? 0.4 : 1,
+                    }]}>
+                    {savingTaskKey === `${task.teamId || 'personal'}:${task.id}`
+                      ? <ActivityIndicator size="small" color={theme.primary} />
+                      : done && <Ionicons name="checkmark" size={15} color="#FFFFFF" />}
+                  </Pressable>
                   <View style={styles.taskBody}>
                     {task.teamId && <Text numberOfLines={1} style={{ color: theme.muted, fontSize: 12, marginBottom: 5 }}>Nhóm: {task.teamName}</Text>}
                     <View style={{ alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 6, backgroundColor: `${status.color}20` }}>

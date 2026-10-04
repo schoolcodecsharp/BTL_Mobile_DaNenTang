@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardModalOverlay } from '@/components/keyboard-modal-overlay';
 import { useAuthSession } from '@/components/auth-session';
 import { FilePicker } from '@/components/file-picker';
 import { TaskExtras } from '@/components/task-extras';
@@ -26,6 +27,7 @@ import {
   createGroupTask,
   createTeam,
   deleteGroupTask,
+  deleteTeam,
   getGroupTasks,
   getTeamActivity,
   getTeamDetail,
@@ -223,6 +225,9 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
 
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingTeam, setDeletingTeam] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const focusedTask = (tasks ?? []).find((task) => String(task.id) === String(focusTaskId));
@@ -275,6 +280,20 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
         },
       },
     ]);
+  }
+
+  async function handleDeleteTeam() {
+    if (!isLeader || deletingTeam) return;
+    setDeletingTeam(true);
+    setDeleteError('');
+    try {
+      await deleteTeam(detail.id);
+    } catch (err) {
+      setDeleteError(err.message);
+      setDeletingTeam(false);
+      return;
+    }
+    onBack();
   }
 
   async function handleLeave() {
@@ -412,6 +431,12 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
                   style={[styles.actionBtn, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9', borderWidth: 1, borderColor: theme.border }]}>
                   <Ionicons name="swap-horizontal-outline" size={18} color={theme.text} />
                   <Text style={[styles.actionBtnText, { color: theme.text }]}>Chuyển trưởng nhóm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { setDeleteError(''); setShowDeleteModal(true); }}
+                  style={[styles.actionBtn, { backgroundColor: '#E11D48' }]}>
+                  <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.actionBtnText}>Xóa nhóm</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -566,6 +591,35 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
       </ScrollView>
 
       {/* Modals */}
+      <Modal visible={showDeleteModal && isLeader} animationType="slide" transparent
+        onRequestClose={() => { if (!deletingTeam) setShowDeleteModal(false); }}>
+        <KeyboardModalOverlay>
+          <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Xóa nhóm</Text>
+            </View>
+            <View style={styles.modalContent}>
+              <Text style={[styles.detailInfoText, { color: theme.text }]}>
+                Bạn có chắc muốn xóa nhóm “{detail.tenNhom}”? Toàn bộ công việc, bình luận,
+                lịch sử hoạt động, thông báo và danh sách thành viên của nhóm sẽ bị xóa vĩnh viễn.
+                Thao tác này không thể hoàn tác.
+              </Text>
+              {!!deleteError && <Text accessibilityRole="alert" style={styles.formError}>{deleteError}</Text>}
+              <TouchableOpacity accessibilityRole="button" disabled={deletingTeam}
+                onPress={handleDeleteTeam}
+                style={[styles.saveBtn, { backgroundColor: '#E11D48', opacity: deletingTeam ? 0.6 : 1 }]}>
+                {deletingTeam ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveBtnText}>Xóa nhóm vĩnh viễn</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" disabled={deletingTeam}
+                onPress={() => setShowDeleteModal(false)}
+                style={[styles.outlineBtn, { marginTop: 12, borderColor: theme.border }]}>
+                <Text style={[styles.outlineBtnText, { color: theme.text }]}>Hủy</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardModalOverlay>
+      </Modal>
+
       <InviteMemberModal
         visible={showInviteModal}
         theme={theme}
@@ -642,13 +696,13 @@ function CreateTeamModal({ visible, theme, user, onClose, onCreated }) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Tạo nhóm mới</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
           </View>
-          <View style={styles.modalContent}>
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: theme.text }]}>Tên nhóm *</Text>
             <TextInput
               style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
@@ -672,9 +726,9 @@ function CreateTeamModal({ visible, theme, user, onClose, onCreated }) {
             <TouchableOpacity onPress={handleCreate} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.7 }]}>
               {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.saveBtnText}>Tạo nhóm</Text>}
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -704,13 +758,13 @@ function InviteMemberModal({ visible, theme, teamId, userId, onClose, onInvited 
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Mời thành viên</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
           </View>
-          <View style={styles.modalContent}>
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: theme.text }]}>Email người được mời</Text>
             <TextInput
               style={[styles.textInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
@@ -725,9 +779,9 @@ function InviteMemberModal({ visible, theme, teamId, userId, onClose, onInvited 
             <TouchableOpacity onPress={handleInvite} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.7 }]}>
               {saving ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.saveBtnText}>Gửi lời mời</Text>}
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -767,13 +821,13 @@ function TransferLeaderModal({ visible, theme, teamId, userId, members, onClose,
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Chuyển trưởng nhóm</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.modalContent}>
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <Text style={[styles.transferNote, { color: theme.muted }]}>
               ⚠️ Sau khi chuyển, bạn sẽ trở thành thành viên thường và không còn quyền quản lý nhóm.
             </Text>
@@ -808,7 +862,7 @@ function TransferLeaderModal({ visible, theme, teamId, userId, members, onClose,
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -909,7 +963,7 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, edit
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
@@ -1062,7 +1116,7 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, edit
             </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -1085,13 +1139,13 @@ function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClo
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-      <View style={styles.modalOverlay}>
+      <KeyboardModalOverlay>
         <View style={[styles.modalSheet, { backgroundColor: theme.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>Chi tiết công việc</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={theme.muted} /></TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {/* Title */}
             <Text style={[styles.detailTaskTitle, { color: theme.text }]}>{task.tieuDe}</Text>
 
@@ -1113,7 +1167,7 @@ function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClo
               </Text>
             </View>
 
-            {visible && <TaskExtras key={task.id} path={`/api/teams/${task.nhomId}/tasks/${task.id}/comments`} theme={theme} comments userId={userId} isLeader={isLeader} />}
+            {visible && <TaskExtras key={task.id} path={`/api/teams/${task.nhomId}/tasks/${task.id}/comments`} theme={theme} userId={userId} isLeader={isLeader} />}
             {/* People & Deadline */}
             <Text style={[styles.detailSectionLabel, { color: theme.muted, marginTop: 14 }]}>THÔNG TIN GIAO VIỆC</Text>
             <View style={[styles.detailInfoBox, { backgroundColor: theme.background, borderColor: theme.border, gap: 10 }]}>
@@ -1197,7 +1251,7 @@ function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClo
             )}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardModalOverlay>
     </Modal>
   );
 }
@@ -1260,7 +1314,6 @@ const styles = StyleSheet.create({
   progressBtn: { marginTop: 10, paddingVertical: 8, borderRadius: 10, borderWidth: 1, alignItems: 'center' },
   progressBtnText: { fontSize: 12.5, fontWeight: '700' },
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1 },
   modalTitle: { fontSize: 18, fontWeight: '800' },

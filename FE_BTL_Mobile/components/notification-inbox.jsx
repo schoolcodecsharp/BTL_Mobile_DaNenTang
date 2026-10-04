@@ -5,6 +5,15 @@ import { router, useFocusEffect } from 'expo-router';
 import { useAuthSession } from './auth-session';
 import { markHistoryRead, readHistory, subscribeHistory } from '@/lib/notification-history';
 import { getNotifications, markNotificationRead } from '@/lib/notifications-api';
+const TYPES = {
+  GIAO_VIEC_NHOM: ['briefcase-outline', 'Giao việc'],
+  DOI_NGUOI_NHAN: ['swap-horizontal-outline', 'Đổi người nhận'],
+  DOI_HAN_NHOM: ['calendar-outline', 'Đổi hạn'],
+  TRANG_THAI_NHOM: ['checkmark-circle-outline', 'Trạng thái'],
+  BINH_LUAN_NHOM: ['chatbubble-outline', 'Bình luận'],
+  THANH_VIEN_NHOM: ['people-outline', 'Thành viên'],
+  TRUONG_NHOM: ['star-outline', 'Trưởng nhóm'],
+};
 
 export function NotificationInbox({ theme }) {
   const { user } = useAuthSession();
@@ -15,7 +24,7 @@ export function NotificationInbox({ theme }) {
   const serverItems = serverHistory.userId === user?.id ? serverHistory.items : [];
   const items = [...serverItems.map((item) => ({ id: `server:${item.id}`, serverId: item.id,
     title: item.tieuDe, body: item.noiDung || '', date: new Date(item.ngayTao).getTime(), read: item.daDoc,
-    taskId: item.congViecId, teamId: item.nhomId, groupTaskId: item.congViecNhomId })), ...localItems]
+    taskId: item.congViecId, teamId: item.nhomId, groupTaskId: item.congViecNhomId, type: item.loai })), ...localItems]
     .sort((a, b) => b.date - a.date);
   const refreshServer = useCallback(async () => {
     if (!user?.id) return;
@@ -58,10 +67,14 @@ export function NotificationInbox({ theme }) {
                 else await markHistoryRead(user.id, [item.id]);
               } catch { Alert.alert('Thông báo', 'Chưa lưu được trạng thái đã đọc.'); return; }
               setVisible(false);
-              if (item.teamId && item.groupTaskId) router.push({ pathname: '/(tabs)/teams', params: { teamId: String(item.teamId), taskId: String(item.groupTaskId) } });
+              if (item.teamId) router.push({ pathname: '/(tabs)/teams', params: { teamId: String(item.teamId), taskId: item.groupTaskId ? String(item.groupTaskId) : '' } });
               else if (item.taskId) router.push({ pathname: '/(tabs)/tasks', params: { taskId: String(item.taskId) } });
               if (item.serverId) void refreshServer().catch(() => {});
             }} style={{ padding: 14, marginBottom: 10, borderRadius: 12, backgroundColor: item.read ? theme.background : '#6366F11A' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name={(TYPES[item.type] ?? ['alarm-outline', 'Nhắc nhở'])[0]} size={16} color={theme.primary} />
+                <Text style={{ color: theme.primary, fontSize: 12 }}>{(TYPES[item.type] ?? ['alarm-outline', item.serverId ? 'Thông báo' : 'Nhắc nhở'])[1]}</Text>
+              </View>
               <Text style={{ color: theme.text, fontWeight: item.read ? '500' : '700' }}>{item.title}</Text>
               <Text style={{ color: theme.text, marginTop: 5 }}>{item.body}</Text>
               <Text style={{ color: theme.muted, fontSize: 12, marginTop: 8 }}>{new Date(item.date).toLocaleString('vi-VN')}{item.read ? '' : ' • Chưa đọc'}</Text>
