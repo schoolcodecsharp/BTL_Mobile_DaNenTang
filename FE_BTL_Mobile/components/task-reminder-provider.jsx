@@ -4,6 +4,7 @@ import { router, useRootNavigationState } from 'expo-router';
 import { useAuthSession } from './auth-session';
 import { getTasks } from '@/lib/tasks-api';
 import { recordNotification } from '@/lib/notification-history';
+import { markNotificationRead } from '@/lib/notifications-api';
 import {
   activateReminders, getReminderState, notificationsModule, refreshReminderPermission,
   remindersSupported, reportReminderError, setRemindersEnabled, subscribeReminders,
@@ -65,8 +66,17 @@ export function TaskReminderProvider({ children }) {
   useEffect(() => {
     if (!response || !user?.id || !navigation?.key) return;
     const data = response.notification.request.content.data;
-    if (String(data?.userId) === String(user.id) && data?.taskId) {
-      router.push({ pathname: '/(tabs)/tasks', params: { taskId: String(data.taskId) } });
+    if (String(data?.userId) === String(user.id)) {
+      if (data.notificationId) {
+        void markNotificationRead(user.id, data.notificationId).catch(error =>
+          console.warn('Thông báo nhóm:', error.message));
+      }
+      if (data.teamId) {
+        router.push({ pathname: '/(tabs)/teams', params: { teamId: String(data.teamId),
+          taskId: data.groupTaskId ? String(data.groupTaskId) : '' } });
+      } else if (data.taskId) {
+        router.push({ pathname: '/(tabs)/tasks', params: { taskId: String(data.taskId) } });
+      }
     }
     notificationsModule().then(async (n) => {
       await n?.clearLastNotificationResponseAsync();

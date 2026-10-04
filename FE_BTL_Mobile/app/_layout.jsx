@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { AuthSessionProvider } from '@/components/auth-session';
 import { TaskReminderProvider } from '@/components/task-reminder-provider';
+import { ServerNotificationProvider } from '@/components/server-notification-provider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -17,6 +18,7 @@ export default function RootLayout() {
   return (
     <AuthSessionProvider>
       <TaskReminderProvider>
+      <ServerNotificationProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -25,6 +27,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>
+      </ServerNotificationProvider>
       </TaskReminderProvider>
     </AuthSessionProvider>
   );

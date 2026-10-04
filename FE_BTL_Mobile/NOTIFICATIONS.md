@@ -15,7 +15,21 @@ Android/iOS. Sau khi đã đặt lịch, hệ điều hành hiển thị thông 
 - Chỉ đặt tối đa 60 lịch gần nhất để giữ dưới giới hạn lịch của iOS. Các lịch tiếp
   theo được bổ sung khi mở lại app hoặc tải lại danh sách công việc.
 - Thay đổi từ thiết bị khác được cập nhật khi app lấy lại danh sách. Đây là nhắc
-  cục bộ; chưa gửi thông báo nhóm hoặc thông báo đẩy từ máy chủ.
+  cục bộ; chưa gửi thông báo đẩy từ máy chủ khi app đã đóng.
+
+## Thông báo nhóm trên điện thoại
+
+- Khi app ở foreground và đã đăng nhập, app kiểm tra thông báo backend mỗi
+  15 giây trên mọi màn hình. Thông báo mới chưa đọc được hiển thị trên điện thoại
+  nếu nút Thông báo đang bật và đã có quyền hệ điều hành.
+- Lần tải đầu tiên trên thiết bị chỉ ghi nhận thông báo hiện có làm mốc, không
+  phát lại toàn bộ lịch sử. Mốc được lưu riêng cho từng tài khoản; lần mở sau
+  sẽ hiển thị thông báo mới chưa đọc phát sinh sau mốc này.
+- Bấm thông báo mở đúng nhóm/công việc và đánh dấu đã đọc trên backend.
+  Lịch sử nhóm vẫn lấy từ backend, không tạo bản sao trong lịch sử nhắc cá nhân.
+- Khi chuyển app sang nền hoặc đóng app, việc kiểm tra dừng. Muốn nhận thông
+  báo nhóm ngay trong trạng thái này cần triển khai push FCM/APNs; dự án hiện
+  chưa có cấu hình Firebase/FCM, nên không đảm bảo nhận khi app đang đóng.
 
 ## Chạy và kiểm tra trên thiết bị
 
@@ -37,7 +51,8 @@ Các chức năng quản lý công việc vẫn hoạt động; để dùng nh�
 
 Không dùng “Buộc dừng” của Android để mô phỏng đóng app thông thường. Chế độ tiết
 kiệm pin và quyền của hệ điều hành có thể làm trễ thông báo; cấu hình hiện tại không
-yêu cầu quyền báo thức chính xác đặc biệt trên Android.
+có khai báo quyền báo thức chính xác trên Android. Người dùng cần cho phép
+“Báo thức và lời nhắc” trong cài đặt hệ thống để hạn chế nhắc trễ.
 
 ## Kiểm tra tự động
 
