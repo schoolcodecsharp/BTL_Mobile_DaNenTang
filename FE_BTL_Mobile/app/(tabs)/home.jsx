@@ -157,12 +157,12 @@ export default function HomeScreen() {
   const completed = tasks.filter((t) => t.trangThai === 'HOAN_THANH').length;
   const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
 
-  const todayTasks = useMemo(() => orderHomeTasks(tasks, now), [tasks, now]);
+  const pendingTasks = useMemo(() => orderHomeTasks(tasks, now), [tasks, now]);
 
-  const visibleTasks = useMemo(() => todayTasks.filter((task) => {
+  const visibleTasks = useMemo(() => pendingTasks.filter((task) => {
     const matchesFilter = filter === 'Tất cả' || STATUS_STYLES[task.trangThai]?.label === filter;
     return matchesFilter && task.tieuDe.toLowerCase().includes(search.trim().toLowerCase());
-  }), [filter, search, todayTasks]);
+  }), [filter, search, pendingTasks]);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -186,7 +186,7 @@ export default function HomeScreen() {
           <View style={styles.heroGlow} />
           <View style={styles.heroTop}>
             <View style={styles.heroCopy}>
-              <Text style={styles.heroLabel}>TIẾN ĐỘ HÔM NAY</Text>
+              <Text style={styles.heroLabel}>TIẾN ĐỘ CÔNG VIỆC</Text>
               <Text style={styles.heroTitle}>
                 {progress >= 100 ? '🎉 Hoàn thành tất cả!' : progress >= 50 ? 'Bạn đang làm rất tốt!' : 'Cố lên nhé!'}
               </Text>
@@ -221,8 +221,8 @@ export default function HomeScreen() {
         {/* Section header */}
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Công việc hôm nay</Text>
-            <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>{visibleTasks.length} công việc • Hạn trước, ưu tiên sau</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Công việc cần làm</Text>
+            <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>{visibleTasks.length} công việc • Theo hạn và mức ưu tiên</Text>
           </View>
         </View>
 
@@ -334,13 +334,13 @@ export default function HomeScreen() {
             {!visibleTasks.length && !loading && (
               <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                 <Ionicons name="file-tray-outline" size={38} color={theme.muted} />
-                <Text style={[styles.emptyTitle, { color: theme.text }]}>Không có công việc hôm nay</Text>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>Không có công việc cần làm</Text>
                 <Text style={[styles.emptyText, { color: theme.muted }]}>
                   {!user
                     ? 'Đăng nhập để xem công việc của bạn.'
                     : search || filter !== 'Tất cả'
                       ? 'Thử đổi bộ lọc hoặc từ khóa tìm kiếm.'
-                      : 'Bạn không có công việc nào đến hạn hôm nay.'}
+                      : 'Bạn không có công việc chưa hoàn thành cần làm lúc này.'}
                 </Text>
               </View>
             )}
