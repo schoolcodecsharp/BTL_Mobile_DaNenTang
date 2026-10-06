@@ -1,9 +1,10 @@
 /**
  * Generic API helper for backend calls.
- * Base URL is read from EXPO_PUBLIC_API_URL (set in .env.local).
+ * Base URL supports explicit configuration or automatic Expo LAN discovery.
  */
 
 const DEFAULT_TIMEOUT_MS = 15000;
+const { getApiBaseUrl } = require('./api-url.cjs');
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -20,9 +21,8 @@ export function setApiToken(token) {
 }
 
 function getBaseUrl() {
-  const url = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
-  if (!url) throw new ApiError('Chưa cấu hình EXPO_PUBLIC_API_URL trong .env.local.');
-  return url;
+  try { return getApiBaseUrl(); }
+  catch (error) { throw new ApiError(error.message); }
 }
 
 function parseError(data, status) {

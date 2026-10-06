@@ -177,7 +177,7 @@ export default function AdminAccounts() {
                 </div>}
               <footer className="adm-pagination"><span>{loading ? 'Đang tải…' : data.total ? 'Hiển thị ' + ((page - 1) * 10 + 1) + '–' + Math.min(page * 10, data.total) + ' trong ' + data.total + ' tài khoản' : '0 tài khoản'}</span><div><button className="adm-icon-button" aria-label="Trang trước" disabled={loading || page <= 1 || !!error} onClick={() => setPage(value => value - 1)}><Icon name="chevron-back-outline" size={17} /></button><span>Trang {page} / {pages}</span><button className="adm-icon-button" aria-label="Trang sau" disabled={loading || page >= pages || !!error} onClick={() => setPage(value => value + 1)}><Icon name="chevron-forward-outline" size={17} /></button></div></footer>
             </section>
-            <p className="adm-footnote"><Icon name="information-circle-outline" size={16} />Khóa tài khoản sẽ hạn chế truy cập nhưng không xóa dữ liệu của người dùng.</p>
+            <div className="adm-footnote"><Icon name="information-circle-outline" size={16} /><span>Khóa tài khoản sẽ hạn chế truy cập nhưng không xóa dữ liệu của người dùng.</span></div>
           </main>
         </div>
       </div>}

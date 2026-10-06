@@ -1,4 +1,5 @@
 class AuthApiError extends Error {}
+const { getApiBaseUrl } = require('./api-url.cjs');
 
 function getApiUrl(value) {
   const baseUrl = value?.trim().replace(/\/+$/, '');
@@ -32,7 +33,7 @@ function responseError(data, status) {
 
 async function requestAuth(endpoint, payload, options = {}) {
   // Expo replaces this exact property access with the public build-time setting.
-  const baseUrl = getApiUrl(options.baseUrl ?? process.env.EXPO_PUBLIC_API_URL);
+  const baseUrl = getApiUrl(options.baseUrl ?? getApiBaseUrl());
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15000);

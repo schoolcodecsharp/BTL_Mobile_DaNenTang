@@ -22,6 +22,7 @@ function setup() {
     }
   }
   const context = vm.createContext({
+    require: () => ({ getApiBaseUrl: () => 'http://192.168.1.9:5257' }),
     process: { env: { EXPO_PUBLIC_API_URL: 'http://192.168.1.9:5257/' } },
     FormData: NativeFormData, XMLHttpRequest: UploadRequest,
     fetch: () => assert.fail('URI uploads must bypass Expo fetch'),

@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 5257;
 app.use(cors({
   origin: process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
-    : ['http://localhost:8081', 'http://127.0.0.1:8081'],
+    : ['http://localhost:8081', 'http://127.0.0.1:8081',
+      'http://localhost:8082', 'http://127.0.0.1:8082'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Accept', 'Authorization'],
 }));
