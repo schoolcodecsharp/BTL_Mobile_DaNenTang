@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { router, useRootNavigationState } from 'expo-router';
 import { useAuthSession } from './auth-session';
@@ -8,6 +8,7 @@ import { markNotificationRead } from '@/lib/notifications-api';
 import {
   activateReminders, getReminderState, notificationsModule, refreshReminderPermission,
   remindersSupported, reportReminderError, setRemindersEnabled, subscribeReminders,
+  runNotificationOperation,
 } from '@/lib/task-reminders';
 
 const Context = createContext(null);
@@ -18,16 +19,20 @@ export function TaskReminderProvider({ children }) {
   const navigation = useRootNavigationState();
   const [enabled, setEnabled] = useState(getReminderState);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const [response, setResponse] = useState(null);
+  const toggleRequest = useRef(0);
 
   useEffect(() => subscribeReminders(setEnabled), []);
   useEffect(() => {
+    toggleRequest.current++;
     if (!user?.id || !remindersSupported) return;
     let active = true;
     const activation = activateReminders(user.id);
-    Promise.resolve().then(() => { if (active) setBusy(true); });
+    Promise.resolve().then(() => { if (active) { setBusy(true); setError(''); } });
     activation.then(() => active && getTasks(user.id))
-      .catch(reportReminderError).finally(() => { if (active) setBusy(false); });
+      .catch(error => { if (active) setError(error.message); reportReminderError(error); })
+      .finally(() => { if (active) setBusy(false); });
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         refreshReminderPermission().then(() => active && getTasks(user.id)).catch(reportReminderError);
@@ -45,7 +50,7 @@ export function TaskReminderProvider({ children }) {
       if (!n || !active) return;
       const capture = (notification) => recordNotification(notification).catch(reportReminderError);
       const collect = async () => {
-        const presented = await n.getPresentedNotificationsAsync();
+        const presented = await runNotificationOperation('đọc thông báo đã nhận', () => n.getPresentedNotificationsAsync());
         await Promise.all(presented.map(capture));
       };
       received = n.addNotificationReceivedListener(capture);
@@ -57,7 +62,7 @@ export function TaskReminderProvider({ children }) {
         if (state === 'active') void collect().catch(reportReminderError);
       });
       await collect();
-      const last = await n.getLastNotificationResponseAsync();
+      const last = await runNotificationOperation('đọc thông báo đã mở', () => n.getLastNotificationResponseAsync());
       if (active && last) { await capture(last.notification); setResponse(last); }
     }).catch(reportReminderError);
     return () => { active = false; subscription?.remove(); received?.remove(); foreground?.remove(); };
@@ -79,18 +84,30 @@ export function TaskReminderProvider({ children }) {
       }
     }
     notificationsModule().then(async (n) => {
-      await n?.clearLastNotificationResponseAsync();
+      if (n) await runNotificationOperation('đánh dấu thông báo đã mở', () => n.clearLastNotificationResponseAsync());
       setResponse((current) => current === response ? null : current);
     }).catch(reportReminderError);
   }, [response, user?.id, navigation?.key]);
 
   async function toggle(value) {
+    const request = ++toggleRequest.current;
     setBusy(true);
+    setError('');
     try {
       await setRemindersEnabled(value);
-      if (value && user?.id) await getTasks(user.id);
-    } catch (error) { reportReminderError(error); }
-    finally { setBusy(false); }
+      if (value && user?.id && request === toggleRequest.current) {
+        // Refreshing tasks/rebuilding alarms must not lock the switch.
+        void getTasks(user.id).catch(error => {
+          if (request === toggleRequest.current) setError(error.message);
+          reportReminderError(error);
+        });
+      }
+    } catch (error) {
+      if (request === toggleRequest.current) setError(error.message);
+      reportReminderError(error);
+    } finally { if (request === toggleRequest.current) setBusy(false); }
   }
-  return <Context.Provider value={{ notificationsEnabled: enabled, setNotificationsEnabled: toggle, notificationsDisabled: busy || !user?.id || !remindersSupported }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ notificationsEnabled: enabled, setNotificationsEnabled: toggle,
+    notificationsBusy: busy, notificationsError: error,
+    notificationsDisabled: busy || !user?.id || !remindersSupported }}>{children}</Context.Provider>;
 }

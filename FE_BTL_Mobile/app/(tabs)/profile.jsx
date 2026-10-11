@@ -33,6 +33,7 @@ export default function ProfileScreen() {
   const { user, updateUser, signOut } = useAuthSession();
 
   const { notificationsEnabled, setNotificationsEnabled, notificationsDisabled } = useTaskReminders();
+  const [testingNotification, setTestingNotification] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [taskStats, setTaskStats] = useState({ total: 0, completed: 0, rate: 0 });
 
@@ -193,18 +194,25 @@ export default function ProfileScreen() {
             <View style={styles.menuCopy}>
               <Text style={[styles.menuTitle, { color: theme.text }]}>Thông báo</Text>
               <Text style={[styles.menuSubtitle, { color: theme.muted }]}>Nhắc trước 1 ngày, 1 giờ, 10 phút và đúng hạn</Text>
-              <TouchableOpacity accessibilityRole="button" onPress={async () => {
+              <TouchableOpacity accessibilityRole="button" disabled={testingNotification || !user?.id}
+                hitSlop={{ top: 8, bottom: 8 }}
+                accessibilityState={{ disabled: testingNotification || !user?.id, busy: testingNotification }} onPress={async () => {
+                if (testingNotification || !user?.id) return;
+                setTestingNotification(true);
                 try {
-                  await sendTestReminder();
+                  await sendTestReminder(user.id);
                   Alert.alert('Đã đặt thông báo thử', 'Thông báo sẽ xuất hiện sau 10 giây. Nếu không thấy, kiểm tra quyền thông báo và quyền Báo thức & lời nhắc trong Cài đặt Android.');
                 } catch (err) {
                   Alert.alert('Chưa gửi được thông báo thử', `${err.message}\nKiểm tra quyền Thông báo và Báo thức & lời nhắc trong Cài đặt Android.`);
+                } finally {
+                  setTestingNotification(false);
                 }
               }} style={{ paddingVertical: 8 }}>
                 <Text style={{ color: theme.primary, fontWeight: '600' }}>Thử thông báo sau 10 giây</Text>
               </TouchableOpacity>
             </View>
             <Switch
+              accessibilityLabel="Bật nhắc công việc"
               disabled={notificationsDisabled} value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
               trackColor={{ false: '#CBD5E1', true: '#A5B4FC' }}

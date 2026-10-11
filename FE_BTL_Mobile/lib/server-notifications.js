@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getNotifications } from './notifications-api';
-import { getReminderState, notificationsModule } from './task-reminders';
+import { getReminderStatus, notificationsModule, runNotificationOperation } from './task-reminders';
 
 // Persist the cursor per account so opening the inbox or restarting cannot
 // replay old events. The first fetch establishes the existing inbox baseline.
@@ -9,26 +9,30 @@ export function createServerNotificationPoller(userId, isActive) {
   const key = `server-notification-cursor-v1:${userId}`;
   return () => {
     queue = queue.catch(() => {}).then(async () => {
-      if (!isActive()) return;
+      // Startup is not an explicit opt-out. Do not consume new events before
+      // this account's permission/preference state has actually been restored.
+      if (!isActive() || !getReminderStatus(userId).ready) return;
       const list = await getNotifications(userId);
-      if (!isActive()) return;
+      if (!isActive() || !getReminderStatus(userId).ready) return;
       const saved = await AsyncStorage.getItem(key);
-      const cursor = saved === null ? null : Number(saved);
+      const parsed = saved === null ? null : Number(saved);
+      const cursor = Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
       let highest = cursor ?? 0;
       const sorted = [...list].sort((a, b) => Number(a.id) - Number(b.id));
       for (const item of sorted) {
         const id = Number(item.id);
         if (!Number.isSafeInteger(id) || id <= 0) continue;
-        if (!isActive()) return;
-        if (cursor !== null && id > cursor && !item.daDoc && getReminderState()) {
-          const n = await notificationsModule();
+        if (!isActive() || !getReminderStatus(userId).ready) return;
+        if (cursor !== null && id > cursor && !item.daDoc && getReminderStatus(userId).enabled) {
+          const n = await runNotificationOperation('Mở thông báo nhóm', notificationsModule);
           if (!isActive()) return;
           if (n) {
-            await n.setNotificationChannelAsync?.('team-notifications', {
+            await runNotificationOperation('Tạo kênh thông báo nhóm', () => n.setNotificationChannelAsync?.('team-notifications', {
               name: 'Thông báo nhóm', importance: n.AndroidImportance.HIGH,
-            });
-            if (!isActive() || !getReminderState()) return;
-            await n.scheduleNotificationAsync({
+            }));
+            const status = getReminderStatus(userId);
+            if (!isActive() || !status.ready || !status.enabled) return;
+            await runNotificationOperation('Gửi thông báo nhóm', () => n.scheduleNotificationAsync({
               identifier: `server-notification:${userId}:${id}`,
               content: {
                 title: item.tieuDe || 'Thông báo', body: item.noiDung || '', sound: 'default',
@@ -36,7 +40,7 @@ export function createServerNotificationPoller(userId, isActive) {
                   teamId: item.nhomId, groupTaskId: item.congViecNhomId, taskId: item.congViecId },
               },
               trigger: { channelId: 'team-notifications' },
-            });
+            }));
           }
         }
         highest = Math.max(highest, id);

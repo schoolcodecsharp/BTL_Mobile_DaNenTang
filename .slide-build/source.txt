@@ -1,0 +1,465 @@
+BỘ GIÁO DỤC VÀ ĐÀO TẠO
+TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT HƯNG YÊN
+
+
+
+
+
+BÀI TẬP LỚN MÔN LẬP TRÌNH MOBILE ĐA NỀN TẢNG
+
+PHÁT TRIỂN ỨNG DỤNG QUẢN LÝ CÔNG VIỆC CÁ NHÂN
+(TO-DO LIST) 
+
+
+NGÀNH: KỸ THUẬT PHẦN MỀM
+CHUYÊN NGÀNH: PHÁT TRIỂN ỨNG DỤNG PHẦN MỀM
+
+
+SINH VIÊN: NGUYỄN VĂN TRƯỜNG - 10123341
+               TRẦN BÌNH DƯƠNG - 10123072
+	MÃ LỚP: 12523W.1
+
+
+HƯỚNG DẪN: ThS. VŨ XUÂN THẮNG
+
+
+
+
+HƯNG YÊN – 2026
+NHẬN XÉT
+
+Nhận xét của giảng viên hướng dẫn:
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+.......................................................................................................................................
+GIẢNG VIÊN HƯỚNG DẪN
+                                                                                   (Ký và ghi rõ họ tên)    
+
+
+LỜI CAM ĐOAN
+
+Em xin cam đoan bài tập lớn “Phát triển ứng dụng quản lý công việc cá nhân (To-Do List)” là kết quả thực hiện của bản thân em dưới sự hướng dẫn của thầy Vũ Xuân Thắng.
+Những phần sử dụng tài liệu tham khảo trong bài tập lớn đã được nêu rõ trong phần tài liệu tham khảo. Các kết quả trình bày trong bài tập lớn và chương trình xây dựng được hoàn toàn là kết quả do nhóm em thực hiện.
+Nếu vi phạm lời cam đoan này, em xin chịu hoàn toàn trách nhiệm trước khoa và nhà trường.
+		Hưng Yên, ngày … tháng … năm…..
+		Sinh viên
+
+		…………………………………..
+LỜI CẢM ƠN
+
+Để có thể hoàn thành bài tập lớn này, lời đầu tiên em xin phép gửi lời cảm ơn tới bộ môn Công nghệ phần mềm, Khoa Công nghệ thông tin – Trường Đại học Công Nghệ Kỹ thuật Hưng Yên đã tạo điều kiện thuận lợi cho em thực hiện bài tập lớn môn học này.
+Đặc biệt em xin chân thành cảm ơn thầy Vũ Xuân Thắng đã rất tận tình hướng dẫn, chỉ bảo em trong suốt thời gian thực hiện bài tập lớn vừa qua.
+Em cũng xin chân thành cảm ơn tất cả các Thầy, các Cô trong Trường đã tận tình giảng dạy, trang bị cho em những kiến thức cần thiết, quý báu để giúp em thực hiện được bài tập lớn này.
+Mặc dù em đã có cố gắng, nhưng với trình độ còn hạn chế, trong quá trình thực hiện đề tài không tránh khỏi những thiếu sót. Em hi vọng sẽ nhận được những ý kiến nhận xét, góp ý của Thầy giáo, Cô giáo về những kết quả triển khai trong bài tập lớn
+Em xin trân trọng cảm ơn!
+
+MỤC LỤC
+ TOC \o "1-3" \h \z \u  HYPERLINK \l _Toc26136 NHẬN XÉT	 PAGEREF _Toc26136 \h 2
+ HYPERLINK \l _Toc2813 DANH MỤC CÁC THUẬT NGỮ	 PAGEREF _Toc2813 \h 7
+ HYPERLINK \l _Toc13958 DANH MỤC CÁC BẢNG	 PAGEREF _Toc13958 \h 9
+ HYPERLINK \l _Toc3698 DANH MỤC CÁC HÌNH VẼ, ĐỒ THỊ	 PAGEREF _Toc3698 \h 10
+ HYPERLINK \l _Toc15243 CHƯƠNG 1: TỔNG QUAN VỀ ĐỀ TÀI	 PAGEREF _Toc15243 \h 11
+ HYPERLINK \l _Toc2136 1.1. Lý do chọn đề tài	 PAGEREF _Toc2136 \h 11
+ HYPERLINK \l _Toc3477 1.2. Mục tiêu của đề tài	 PAGEREF _Toc3477 \h 11
+ HYPERLINK \l _Toc17185 1.2.1 Mục tiêu tổng quát	 PAGEREF _Toc17185 \h 11
+ HYPERLINK \l _Toc31267 1.2.2 Mục tiêu cụ thể	 PAGEREF _Toc31267 \h 11
+ HYPERLINK \l _Toc6107 1.3. Giới hạn và phạm vi của đề tài	 PAGEREF _Toc6107 \h 12
+ HYPERLINK \l _Toc22894 1.3.1 Đối tượng nghiên cứu	 PAGEREF _Toc22894 \h 12
+ HYPERLINK \l _Toc23474 1.3.2 Phạm vi nghiên cứu	 PAGEREF _Toc23474 \h 12
+ HYPERLINK \l _Toc31329 1.4. Nội dung thực hiện	 PAGEREF _Toc31329 \h 12
+ HYPERLINK \l _Toc32399 1.5. Phương pháp tiếp cận	 PAGEREF _Toc32399 \h 13
+ HYPERLINK \l _Toc8005 CHƯƠNG 2: CƠ SỞ LÝ THUYẾT	 PAGEREF _Toc8005 \h 14
+ HYPERLINK \l _Toc2963 2.1. Quy trình phát triển phần mềm	 PAGEREF _Toc2963 \h 14
+ HYPERLINK \l _Toc6344 2.2. Hệ quản trị cơ sở dữ liệu MySQL	 PAGEREF _Toc6344 \h 14
+ HYPERLINK \l _Toc638 2.3. Ngôn ngữ lập trình và Công cụ phát triển	 PAGEREF _Toc638 \h 14
+ HYPERLINK \l _Toc14922 2.4. Các thành phần giao diện và Tài nguyên	 PAGEREF _Toc14922 \h 15
+ HYPERLINK \l _Toc31048 CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG	 PAGEREF _Toc31048 \h 16
+ HYPERLINK \l _Toc31132 3.1 Phát biểu bài toán	 PAGEREF _Toc31132 \h 16
+ HYPERLINK \l _Toc12139 3.2 Đặc tả yêu cầu phần mềm	 PAGEREF _Toc12139 \h 17
+ HYPERLINK \l _Toc23945 3.2.1 Các yêu cầu chức năng	 PAGEREF _Toc23945 \h 17
+ HYPERLINK \l _Toc18620 3.2.2 Biểu đồ lớp	 PAGEREF _Toc18620 \h 27
+ HYPERLINK \l _Toc14826 3.2.3 Thiết kế cơ sở dữ liệu	 PAGEREF _Toc14826 \h 28
+ HYPERLINK \l _Toc21440 3.2.4 Biểu đồ tuần tự	 PAGEREF _Toc21440 \h 30
+ HYPERLINK \l _Toc27919 3.3 Thiết kế giao diện mobile	 PAGEREF _Toc27919 \h 33
+ HYPERLINK \l _Toc8153 3.3.1. Thiết kế giao diện đăng nhập	 PAGEREF _Toc8153 \h 33
+ HYPERLINK \l _Toc12744 3.3.2. Thiết kế giao diện đăng ký	 PAGEREF _Toc12744 \h 34
+ HYPERLINK \l _Toc18888 3.3.3. Thiết kế giao diện trang chủ	 PAGEREF _Toc18888 \h 35
+ HYPERLINK \l _Toc29263 3.3.4. Thiết kế giao diện công việc	 PAGEREF _Toc29263 \h 36
+ HYPERLINK \l _Toc22870 3.3.5. Thiết kế giao diện lịch công việc	 PAGEREF _Toc22870 \h 37
+ HYPERLINK \l _Toc11230 3.3.6. Thiết kế giao diện thống kê công việc	 PAGEREF _Toc11230 \h 38
+ HYPERLINK \l _Toc24862 3.3.7. Thiết kế giao diện cá nhân	 PAGEREF _Toc24862 \h 39
+ HYPERLINK \l _Toc12228 3.3.8. Thiết kế giao diện đăng nhập admin	 PAGEREF _Toc12228 \h 40
+ HYPERLINK \l _Toc22992 3.3.9. Thiết kế giao diện quản lý tài khoản	 PAGEREF _Toc22992 \h 40
+ HYPERLINK \l _Toc13861 CHƯƠNG 4: TRIỂN KHAI ỨNG DỤNG	 PAGEREF _Toc13861 \h 41
+ HYPERLINK \l _Toc31846 4.1 Môi trường và công nghệ phát triển	 PAGEREF _Toc31846 \h 41
+ HYPERLINK \l _Toc6103 4.2 Môi trường và công nghệ phát triển	 PAGEREF _Toc6103 \h 41
+ HYPERLINK \l _Toc15133 4.2.1 Chức năng đăng ký và đăng nhập	 PAGEREF _Toc15133 \h 41
+ HYPERLINK \l _Toc28655 4.2.2. Quản lý thông tin cá nhân	 PAGEREF _Toc28655 \h 41
+ HYPERLINK \l _Toc14138 4.2.3. Quản lý công việc	 PAGEREF _Toc14138 \h 42
+ HYPERLINK \l _Toc11010 4.2.4. Quản lý dự án	 PAGEREF _Toc11010 \h 42
+ HYPERLINK \l _Toc16861 4.2.5. Quản lý thành viên dự án	 PAGEREF _Toc16861 \h 42
+ HYPERLINK \l _Toc31016 4.2.6. Quản lý công việc trong dự án	 PAGEREF _Toc31016 \h 42
+ HYPERLINK \l _Toc10343 4.2.7. Tìm kiếm và thống kê	 PAGEREF _Toc10343 \h 43
+ HYPERLINK \l _Toc310 4.3 Triển khai cơ sở dữ liệu	 PAGEREF _Toc310 \h 43
+ HYPERLINK \l _Toc20817 4.4 Triển khai giao diện người dùng	 PAGEREF _Toc20817 \h 43
+ HYPERLINK \l _Toc26331 4.5 Kiểm thử ứng dụng	 PAGEREF _Toc26331 \h 43
+ HYPERLINK \l _Toc5210 4.5.1. Kiểm thử chức năng	 PAGEREF _Toc5210 \h 44
+ HYPERLINK \l _Toc20849 4.5.2. Kiểm thử dữ liệu	 PAGEREF _Toc20849 \h 44
+ HYPERLINK \l _Toc24823 4.5.3. Kiểm thử giao diện	 PAGEREF _Toc24823 \h 44
+ HYPERLINK \l _Toc9173 4.6 Triển khai ứng dụng	 PAGEREF _Toc9173 \h 44
+ HYPERLINK \l _Toc4822 KẾT LUẬN	 PAGEREF _Toc4822 \h 45
+ HYPERLINK \l _Toc15160 TÀI LIỆU THAM KHẢO	 PAGEREF _Toc15160 \h 47
+
+DANH MỤC CÁC THUẬT NGỮ
+
+STT | Từ viết tắt | Cụm từ tiếng Anh | Diễn giải |  | 1 | OOP | Object-Oriented Programming | Lập trình hướng đối tượng – phương pháp tổ chức mã nguồn theo các lớp và đối tượng. |  | 2 | UI | User Interface | Giao diện người dùng – phần hiển thị trực quan mà người dùng tương tác. |  | 3 | UX | User Experience | Trải nghiệm người dùng – cảm nhận và trải nghiệm khi sử dụng ứng dụng. |  | 4 | IDE | Integrated Development Environment | Môi trường phát triển tích hợp – công cụ phần mềm hỗ trợ lập trình viên viết, kiểm tra và chạy mã nguồn. |  | 5 | API | Application Programming Interface | Giao diện lập trình ứng dụng – tập hợp các quy tắc cho phép các phần mềm giao tiếp với nhau. |  | 6 | CRUD | Create, Read, Update, Delete | Bốn thao tác cơ bản trong quản lý cơ sở dữ liệu: Tạo, Đọc, Cập nhật, Xóa. |  | 7 | AVD | Android Virtual Device | Thiết bị Android ảo – máy ảo mô phỏng thiết bị Android dùng để kiểm thử ứng dụng. |  | 8 | ERD | Entity-Relationship Diagram | Sơ đồ thực thể - quan hệ, dùng để mô hình hóa cấu trúc cơ sở dữ liệu. |  | 9 | RAM | Random Access Memory | Bộ nhớ truy cập ngẫu nhiên – bộ nhớ tạm thời của thiết bị dùng để chạy ứng dụng. |  | 10 | DB | Database | Cơ sở dữ liệu – nơi lưu trữ và quản lý dữ liệu có cấu trúc. |  | 11 | XML | Extensible Markup Language | Ngôn ngữ đánh dấu mở rộng – dùng để định nghĩa cấu trúc giao diện trong Android. |  | 
+DANH MỤC CÁC BẢNG
+
+ TOC \h \z \t "Bang" \c  HYPERLINK \l _Toc18271 Bảng 3-1: Mô tả Use Case quản lý tài khoản	 PAGEREF _Toc18271 \h 18
+ HYPERLINK \l _Toc12608 Bảng 3-2: Luồng sự kiện Use Case quản lý tài khoản	 PAGEREF _Toc12608 \h 19
+ HYPERLINK \l _Toc19823 Bảng 3-3: Mô tả Use Case quản lý thông tin cá nhân	 PAGEREF _Toc19823 \h 20
+ HYPERLINK \l _Toc29854 Bảng 3-4: Luồng sự kiện Use Case quản lý thông tin cá nhân	 PAGEREF _Toc29854 \h 21
+ HYPERLINK \l _Toc12358 Bảng 3-5: Mô tả Use Case quản lý công việc	 PAGEREF _Toc12358 \h 22
+ HYPERLINK \l _Toc15456 Bảng 3-6: Luồng sự kiện Use Case quản lý công việc	 PAGEREF _Toc15456 \h 23
+ HYPERLINK \l _Toc8910 Bảng 3-7: Mô tả Use Case quản lý dự án	 PAGEREF _Toc8910 \h 24
+ HYPERLINK \l _Toc14207 Bảng 3-8: Luồng sự kiện Use Case quản lý dự án	 PAGEREF _Toc14207 \h 25
+
+DANH MỤC CÁC HÌNH VẼ, ĐỒ THỊ
+ TOC \h \z \t "HinhVe" \c  HYPERLINK \l _Toc3173 Hình 3-1: Biểu đồ Use Case tổng quát	 PAGEREF _Toc3173 \h 17
+ HYPERLINK \l _Toc23029 Hình 3-2: Biểu đồ Use Case quản lý tài khoản	 PAGEREF _Toc23029 \h 18
+ HYPERLINK \l _Toc25115 Hình 3-3: Biểu đồ Use Case quản lý thông tin cá nhân	 PAGEREF _Toc25115 \h 20
+ HYPERLINK \l _Toc27122 Hình 3-4: Biểu đồ Use Case quản lý công việc	 PAGEREF _Toc27122 \h 22
+ HYPERLINK \l _Toc8151 Hình 3-5: Biểu đồ Use Case quản lý dự án	 PAGEREF _Toc8151 \h 24
+ HYPERLINK \l _Toc10013 Hình 3-6: Biểu đồ lớp của hệ thống	 PAGEREF _Toc10013 \h 27
+ HYPERLINK \l _Toc32282 Hình 3-7: Mô hình cơ sở dữ liệu	 PAGEREF _Toc32282 \h 29
+ HYPERLINK \l _Toc15274 Hình 3-8: Biểu đồ tuần tự chức năng sửa thông tin cá nhân	 PAGEREF _Toc15274 \h 30
+ HYPERLINK \l _Toc24722 Hình 3-9: Biểu đồ tuần tự chức năng thêm công việc	 PAGEREF _Toc24722 \h 30
+ HYPERLINK \l _Toc10622 Hình 3-10: Biểu đồ tuần tự chức năng thêm dự án	 PAGEREF _Toc10622 \h 31
+ HYPERLINK \l _Toc30334 Hình 3-11: Biểu đồ tuần tự chức năng thêm người dùng vào dự án	 PAGEREF _Toc30334 \h 31
+ HYPERLINK \l _Toc27683 Hình 3-12: Biểu đồ tuần tự chức năng đổi mật khẩu	 PAGEREF _Toc27683 \h 32
+ HYPERLINK \l _Toc14713 Hình 3-13: Biểu đồ tuần tự chức năng đăng nhập	 PAGEREF _Toc14713 \h 32
+ HYPERLINK \l _Toc14868 Hình 3-14: Giao diện  đăng nhập	 PAGEREF _Toc14868 \h 33
+ HYPERLINK \l _Toc25627 Hình 3-15: Giao diện trang đăng ký	 PAGEREF _Toc25627 \h 34
+ HYPERLINK \l _Toc29041 Hình 3-16: Giao diện trang chủ	 PAGEREF _Toc29041 \h 35
+ HYPERLINK \l _Toc14941 Hình 3-17: Giao diện thêm công việc	 PAGEREF _Toc14941 \h 36
+ HYPERLINK \l _Toc4925 Hình 3-18: Giao diện lịch công việc	 PAGEREF _Toc4925 \h 37
+ HYPERLINK \l _Toc6755 Hình 3-19: Giao diện thống kê công việc	 PAGEREF _Toc6755 \h 38
+ HYPERLINK \l _Toc2448 Hình 3-20: Giao diện cá nhân	 PAGEREF _Toc2448 \h 39
+ HYPERLINK \l _Toc16478 Hình 3-21: Giao diện đăng nhập admin	 PAGEREF _Toc16478 \h 40
+ HYPERLINK \l _Toc6248 Hình 3-22: Giao diện quản lý tài khoản	 PAGEREF _Toc6248 \h 40
+
+TỔNG QUAN VỀ ĐỀ TÀI
+1.1. Lý do chọn đề tài
+Trong học tập và công việc, mỗi người thường phải thực hiện nhiều nhiệm vụ với thời hạn và mức độ ưu tiên khác nhau. Khi chỉ ghi nhớ hoặc lưu thông tin ở nhiều nơi, người dùng dễ bỏ sót công việc và khó theo dõi tiến độ. Với các nhiệm vụ làm theo nhóm, việc phân công và cập nhật kết quả cũng cần một cách tổ chức thống nhất.
+Từ nhu cầu đó, đề tài xây dựng ứng dụng mobile quản lý công việc nhằm hỗ trợ người dùng sắp xếp công việc cá nhân và phối hợp thực hiện nhiệm vụ nhóm. Đề tài đồng thời tạo điều kiện vận dụng kiến thức lập trình mobile, thiết kế giao diện và tổ chức dữ liệu vào một sản phẩm có thể sử dụng trên điện thoại.
+1.2. Mục tiêu của đề tài
+Đề tài hướng tới một ứng dụng dễ sử dụng, giúp người dùng quản lý nhiệm vụ và theo dõi kết quả thực hiện trong cùng một hệ thống.
+1.2.1 Mục tiêu tổng quát 
+Xây dựng ứng dụng quản lý công việc cá nhân và công việc nhóm trên thiết bị di động, kết hợp giao diện mobile với dịch vụ backend để lưu trữ dữ liệu và xử lý nghiệp vụ. Ứng dụng giúp người dùng chủ động tổ chức nhiệm vụ, phân công công việc và nắm được tiến độ thực hiện.
+1.2.2 Mục tiêu cụ thể 
+Ứng dụng cần đáp ứng các nhu cầu cơ bản về tài khoản, quản lý công việc, cộng tác nhóm và theo dõi tiến độ. Các thao tác được tổ chức rõ ràng, có phản hồi khi thành công hoặc gặp lỗi, phù hợp với cách sử dụng trên điện thoại.
+Về kỹ thuật, đề tài tập trung xây dựng sự liên kết giữa giao diện, API và cơ sở dữ liệu; kiểm tra dữ liệu đầu vào và quyền thao tác ở những chức năng cần bảo vệ. Quá trình thực hiện cũng hướng tới mã nguồn dễ bảo trì và thuận tiện bổ sung chức năng.
+1.3. Giới hạn và phạm vi của đề tài
+Phạm vi đề tài được xác định theo nhu cầu quản lý công việc của cá nhân và nhóm nhỏ, phù hợp với thời gian và yêu cầu của bài tập lớn.
+1.3.1 Đối tượng nghiên cứu 
+Đối tượng nghiên cứu là quy trình quản lý nhiệm vụ cá nhân, phân công công việc trong nhóm và theo dõi tiến độ. Đề tài xem xét cách biểu diễn các quy trình này trên giao diện mobile và cách tổ chức dữ liệu để phục vụ các thao tác của người dùng.
+Các công nghệ được nghiên cứu gồm React Native và Expo cho ứng dụng mobile, Node.js và Express cho backend, cùng cơ sở dữ liệu quan hệ để lưu trữ thông tin của hệ thống.
+1.3.2 Phạm vi nghiên cứu 
+Ứng dụng phục vụ người dùng cá nhân và các nhóm làm việc quy mô nhỏ. Nội dung thực hiện tập trung vào các nghiệp vụ quản lý công việc, thành viên nhóm và tiến độ; chưa mở rộng thành hệ thống quản trị doanh nghiệp hoặc quản lý dự án chuyên sâu.
+Android là môi trường triển khai và kiểm tra trực tiếp của đề tài. Dữ liệu nghiệp vụ được trao đổi với backend qua mạng; hệ thống chưa cung cấp đầy đủ khả năng làm việc ngoại tuyến hoặc cập nhật đồng thời theo thời gian thực.
+1.4. Nội dung thực hiện
+Nội dung thực hiện gồm khảo sát nhu cầu, xác định yêu cầu, phân tích các luồng nghiệp vụ và thiết kế dữ liệu. Trên cơ sở đó, đề tài xây dựng giao diện mobile, phát triển API và kết nối ứng dụng với cơ sở dữ liệu.
+Sau khi hoàn thiện các chức năng chính, ứng dụng được kiểm tra về hành vi, dữ liệu và giao diện. Kết quả được tổng hợp trong báo cáo thông qua mô tả hệ thống, các biểu đồ thiết kế và phần triển khai.
+1.5. Phương pháp tiếp cận
+Đề tài được thực hiện theo hướng phát triển từng nhóm chức năng. Trước hết, các tình huống sử dụng được phân tích để xác định dữ liệu và thao tác cần thiết; sau đó thiết kế giao diện, API và cơ sở dữ liệu tương ứng.
+Trong quá trình xây dựng, các chức năng được tích hợp và kiểm tra từng bước. Những vấn đề phát hiện từ kết quả kiểm thử và thao tác thực tế được dùng để điều chỉnh giao diện, xử lý nghiệp vụ và hoàn thiện tài liệu.
+CƠ SỞ LÝ THUYẾT
+2.1. Quy trình phát triển phần mềm
+Quy trình phát triển phần mềm gồm các hoạt động xác định yêu cầu, phân tích, thiết kế, lập trình, kiểm thử và triển khai. Các hoạt động có quan hệ chặt chẽ với nhau: yêu cầu là cơ sở thiết kế, thiết kế định hướng việc lập trình, còn kiểm thử giúp đánh giá mức độ đáp ứng của sản phẩm.
+Trong đề tài, quy trình được áp dụng theo từng nhóm chức năng để thuận tiện kiểm tra và điều chỉnh. Giao diện, nghiệp vụ và dữ liệu được xem xét đồng thời nhằm bảo đảm các phần của hệ thống phối hợp nhất quán khi người dùng thực hiện một thao tác.
+2.2. Hệ quản trị cơ sở dữ liệu MySQL 
+MySQL là hệ quản trị cơ sở dữ liệu quan hệ hoạt động theo mô hình client–server, hỗ trợ lưu trữ dữ liệu tập trung và phục vụ nhiều kết nối. Dữ liệu được tổ chức thành các bảng; khóa chính, khóa ngoại và các ràng buộc giúp thể hiện mối quan hệ và bảo đảm tính toàn vẹn. Truy vấn SQL được sử dụng để đọc và thay đổi dữ liệu, còn giao dịch hỗ trợ xử lý nhất quán các thao tác liên quan nhiều bản ghi.
+Trong dự án này, dữ liệu nghiệp vụ được lưu tập trung bằng MySQL ở backend. Ứng dụng mobile trao đổi dữ liệu qua API; Sequelize hỗ trợ ánh xạ các đối tượng trong chương trình với dữ liệu quan hệ. Thông tin phiên và một số thiết lập cục bộ được lưu bằng AsyncStorage.
+2.3. Ngôn ngữ lập trình và Công cụ phát triển
+JavaScript là ngôn ngữ chính dùng để phát triển ứng dụng. React Native hỗ trợ xây dựng giao diện mobile theo mô hình component, còn Expo cung cấp môi trường phát triển và các khả năng tương tác với thiết bị. Cách tổ chức này giúp tái sử dụng các thành phần giao diện và quản lý trạng thái ứng dụng.
+Backend được xây dựng bằng Node.js và Express để tiếp nhận yêu cầu, xử lý nghiệp vụ và trả kết quả cho ứng dụng. Các công cụ phát triển, giả lập và quản lý mã nguồn hỗ trợ quá trình lập trình, kiểm tra và theo dõi thay đổi của dự án.
+2.4. Các thành phần giao diện và Tài nguyên
+Giao diện mobile được hình thành từ các thành phần hiển thị, nhập liệu, điều hướng và phản hồi thao tác. Việc phối hợp các thành phần này cần bảo đảm nội dung dễ đọc, nút bấm dễ sử dụng và bố cục phù hợp với kích thước màn hình.
+Trong ứng dụng, các màn hình được tổ chức theo các khu vực sử dụng chính như công việc, nhóm, lịch và cá nhân. Những thành phần dùng chung được tái sử dụng để giữ sự nhất quán; hình ảnh, biểu tượng và màu sắc hỗ trợ người dùng nhận biết trạng thái và thực hiện thao tác.
+PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
+Phát biểu bài toán
+Trong bối cảnh hiện nay, việc quản lý công việc trong các doanh nghiệp vừa và nhỏ cũng như trong đời sống cá nhân vẫn còn tồn tại nhiều hạn chế khi sử dụng các phương pháp truyền thống như ghi chép sổ tay hoặc các file Excel rời rạc. Những phương pháp này thường dẫn đến các vấn đề như: khó theo dõi tiến độ công việc, dễ thất lạc thông tin, thiếu sự đồng bộ giữa các thành viên và tốn nhiều thời gian trong việc cập nhật, tổng hợp dữ liệu.
+Đặc biệt, trong môi trường làm việc nhóm, việc thiếu một hệ thống quản lý công việc tập trung sẽ làm giảm hiệu quả phối hợp, gây chậm trễ trong tiến độ thực hiện và ảnh hưởng đến chất lượng công việc. Người quản lý gặp khó khăn trong việc phân công, giám sát và đánh giá hiệu quả làm việc của từng cá nhân, trong khi nhân viên cũng khó nắm bắt được nhiệm vụ và thời hạn hoàn thành.
+Chính vì vậy, việc xây dựng một ứng dụng di động chuyên dụng để quản lý công việc là hết sức cần thiết. Ứng dụng sẽ giúp người dùng tạo lập, theo dõi, phân công và kiểm soát công việc một cách khoa học, minh bạch và hiệu quả. Đồng thời, với ưu điểm của nền tảng di động, người dùng có thể quản lý công việc mọi lúc, mọi nơi.
+Hệ thống được thiết kế với giao diện thân thiện, hiện đại và tối ưu cho thiết bị di động, bao gồm các chức năng chính như sau:
+Màn hình Đăng nhập/Đăng ký:
+Cho phép người dùng tạo tài khoản và đăng nhập vào hệ thống để sử dụng các chức năng quản lý công việc.
+Màn hình Dashboard (Trang chủ:
+Hiển thị tổng quan danh sách công việc, các công việc sắp đến hạn và các chức năng truy cập nhanh.
+Quản lý công việc (Task Management):
+Cho phép người dùng tạo mới, chỉnh sửa, xóa và xem chi tiết các công việc.
+Phân loại công việc (Category):
+Hỗ trợ phân chia công việc theo các danh mục như cá nhân, học tập, công việc nhóm hoặc dự án.
+Quản lý tiến độ:
+Cho phép cập nhật trạng thái công việc (chưa hoàn thành, đang thực hiện, đã hoàn thành).
+Thiết lập thời gian (Deadline):
+Gán thời hạn cho từng công việc và hỗ trợ nhắc nhở khi gần đến hạn.
+Tìm kiếm và lọc công việc:
+Cho phép tìm kiếm nhanh và lọc công việc theo trạng thái hoặc danh mục.
+Thống kê và báo cáo:
+Cung cấp các thông tin thống kê về số lượng công việc đã hoàn thành, chưa hoàn thành nhằm giúp người dùng đánh giá hiệu quả làm việc.
+Quản lý thông tin cá nhân:
+Cho phép người dùng cập nhật thông tin cá nhân và thay đổi mật khẩu.
+Với các chức năng trên, ứng dụng không chỉ giúp người dùng quản lý công việc hiệu quả hơn mà còn hỗ trợ nâng cao năng suất làm việc, cải thiện khả năng tổ chức và tối ưu hóa thời gian trong học tập cũng như công việc.
+Đặc tả yêu cầu phần mềm
+Các yêu cầu chức năng
+- Use case tổng quát:
+
+		Hình 3-1: Biểu đồ Use Case tổng quát
+Chức năng phía quản trị viên (Admin)
+  - Quản lý tài khoản:
+
+Hình 3-2: Biểu đồ Use Case quản lý tài khoản
+
+
+	+ Mô tả Use Case quản lý tài khoản:
+Bảng 3-1: Mô tả Use Case quản lý tài khoản
+Use Case ID | Tên Use Case | Actor | Tiền điều kiện | Hậu điều kiện |  | UC01 | Quản lý người dùng | Admin | Admin đã đăng nhập hệ thống | Hiển thị danh sách người dùng và cho phép thao tác |  | UC01.1 | Thêm người dùng | Admin | Admin đang ở màn hình quản lý người dùng | Người dùng mới được thêm vào hệ thống |  | UC01.2 | Sửa thông tin người dùng | Admin | Người dùng cần sửa đã tồn tại trong hệ thống | Thông tin người dùng được cập nhật |  | UC01.3 | Xóa người dùng | Admin | Người dùng tồn tại trong hệ thống | Người dùng bị xóa khỏi hệ thống |  | 	+ Luồng sự kiện Use Case quản lý tài khoản:
+Bảng 3-2: Luồng sự kiện Use Case quản lý tài khoản
+Use Case ID | Luồng chính (Main Flow) | Luồng phụ (Alternative Flow) |  | UC01
+Quản lý người dùng | 1. Admin đăng nhập hệ thống2. Chọn chức năng “Quản lý người dùng”3. Hệ thống hiển thị danh sách người dùng4. Admin chọn thao tác (thêm/sửa/xóa) | 1. Không có người dùng → hiển thị danh sách trống2. Lỗi tải dữ liệu → thông báo lỗi |  | UC01.1
+Thêm người dùng | 1. Admin chọn “Thêm người dùng”2. Nhập thông tin (tên, email, mật khẩu, quyền)3. Nhấn “Lưu”4. Hệ thống kiểm tra dữ liệu5. Lưu vào database6. Hiển thị thành công | 1. Thiếu thông tin → báo lỗi2. Email trùng → không cho thêm3. Lỗi database → thông báo thất bại |  | UC01.2Sửa thông tin người dùng | 1. Admin chọn người dùng cần sửa2. Hệ thống hiển thị thông tin3. Admin chỉnh sửa4. Nhấn “Cập nhật”5. Hệ thống lưu thay đổi6. Hiển thị thành công | 1. Người dùng không tồn tại → báo lỗi2. Dữ liệu không hợp lệ → không lưu3. Lỗi hệ thống → thông báo |  | UC01.3Xóa người dùng | 1. Admin chọn người dùng2. Nhấn “Xóa”3. Hệ thống yêu cầu xác nhận4. Admin xác nhận5. Hệ thống xóa dữ liệu6. Cập nhật danh sách | 1. Admin hủy xóa → không thay đổi2. Người dùng không tồn tại → báo lỗi3. Lỗi database → không xóa |  | 
+Chức năng phía người dùng
+   - Quản lý thông tin cá nhân:
+
+Hình 3-3: Biểu đồ Use Case quản lý thông tin cá nhân
++ Mô tả Use Case quản lý thông tin cá nhân:
+Bảng 3-3: Mô tả Use Case quản lý thông tin cá nhân
+Use Case ID | Tên Use Case | Actor | Tiền điều kiện | Hậu điều kiện |  | UC02 | Quản lý thông tin cá nhân | User | Người dùng đã đăng nhập hệ thống | Thông tin cá nhân được hiển thị và cho phép cập nhật |  | UC02.1 | Sửa thông tin cá nhân | User | Người dùng đang ở màn hình quản lý thông tin cá nhân | Thông tin cá nhân được cập nhật thành công |  | UC02.2 | Đổi mật khẩu | User | Người dùng đang ở màn hình quản lý thông tin cá nhân | Mật khẩu mới được cập nhật thành công |  | 	
++ Luồng sự kiện Use Case quản lý nhân viên:
+Bảng 3-4: Luồng sự kiện Use Case quản lý thông tin cá nhân
+Use Case ID | Luồng chính (Main Flow) | Luồng phụ (Alternative Flow) |  | UC02
+Quản lý thông tin cá nhân | 1. Người dùng đăng nhập hệ thống2. Chọn chức năng “Quản lý thông tin cá nhân”3. Hệ thống hiển thị thông tin cá nhân4. Người dùng chọn sửa thông tin hoặc đổi mật khẩu | 1. Không tải được dữ liệu người dùng → thông báo lỗi |  | UC02.1
+Sửa thông tin cá nhân | 1. Người dùng chọn “Sửa thông tin cá nhân”2. Hệ thống hiển thị form thông tin3. Người dùng cập nhật thông tin4. Nhấn “Lưu”5. Hệ thống kiểm tra dữ liệu6. Cập nhật dữ liệu thành công | 1. Thiếu thông tin bắt buộc → báo lỗi2. Dữ liệu không hợp lệ → yêu cầu nhập lại3. Lỗi cập nhật → thông báo thất bại |  | UC02.2
+Đổi mật khẩu | 1. Người dùng chọn “Đổi mật khẩu”2. Nhập mật khẩu cũ, mật khẩu mới3. Nhấn “Xác nhận”4. Hệ thống kiểm tra mật khẩu cũ5. Cập nhật mật khẩu mới6. Thông báo thành công | 1. Mật khẩu cũ không đúng → báo lỗi2. Mật khẩu mới không hợp lệ → yêu cầu nhập lại3. Lỗi hệ thống → đổi mật khẩu thất bại |  | 
+   - Quản lý công việc: 
+
+Hình 3-4: Biểu đồ Use Case quản lý công việc
++ Mô tả Use Case quản lý công việc:
+Bảng 3-5: Mô tả Use Case quản lý công việc
+Use Case ID | Tên Use Case | Actor | Tiền điều kiện | Hậu điều kiện |  | UC03 | Quản lý công việc | User | Người dùng đã đăng nhập | Hiển thị danh sách công việc và cho phép thao tác |  | UC03.1 | Thêm công việc | User | Người dùng đang ở màn hình quản lý công việc | Công việc mới được thêm vào hệ thống |  | UC03.2 | Xóa công việc | User | Công việc tồn tại trong hệ thống | Công việc bị xóa khỏi hệ thống |  | UC03.3 | Cập nhật trạng thái công việc | User | Công việc tồn tại trong hệ thống | Trạng thái công việc được cập nhật |  | 	
++ Luồng sự kiện Use Case quản lý công việc:
+Bảng 3-6: Luồng sự kiện Use Case quản lý công việc
+Use Case ID | Luồng chính (Main Flow) | Luồng phụ (Alternative Flow) |  | UC03
+Quản lý công việc | User đăng nhập hệ thống
+2. Chọn “Quản lý công việc”3. Hệ thống hiển thị danh sách công việc4. User chọn thao tác (thêm/xóa/cập nhật) | 1. Không có công việc → hiển thị danh sách trống2. Lỗi tải dữ liệu → thông báo lỗi |  | UC03.1
+Thêm công việc | 1. User chọn “Thêm công việc”2. Nhập thông tin (tiêu đề, mô tả, deadline, ưu tiên)3. Nhấn “Lưu”4. Hệ thống kiểm tra dữ liệu5. Lưu vào database6. Hiển thị công việc mới | 1. Thiếu thông tin → báo lỗi2. Dữ liệu không hợp lệ → yêu cầu nhập lại3. Lỗi database → thông báo thất bại |  | UC03.2
+Xóa công việc | 1. User chọn công việc2. Nhấn “Xóa”3. Hệ thống yêu cầu xác nhận4. User xác nhận5. Hệ thống xóa công việc6. Cập nhật danh sách | 1. User hủy thao tác → không xóa2. Công việc không tồn tại → báo lỗi3. Lỗi hệ thống → không xóa |  | UC03.3
+Cập nhật trạng thái công việc | 1. User chọn công việc2. Thay đổi trạng thái (chưa hoàn thành → đang làm → hoàn thành)3. Hệ thống cập nhật dữ liệu4. Hiển thị trạng thái mới | 1. Công việc không tồn tại → báo lỗi2. Lỗi cập nhật → thông báo thất bại |  | 
+  
+- Quản lý dự án:
+
+Hình 3-5: Biểu đồ Use Case quản lý dự án
++ Mô tả Use Case quản lý dự án:
+Bảng 3-7: Mô tả Use Case quản lý dự án
+Use Case ID | Tên Use Case | Actor | Tiền điều kiện | Hậu điều kiện |  | UC04 | Quản lý dự án | User | Người dùng đã đăng nhập | Hiển thị danh sách dự án |  | UC04.1 | Thêm dự án | User | Đang ở màn hình quản lý dự án | Dự án mới được tạo |  | UC04.2 | Sửa dự án | User | Dự án tồn tại | Thông tin dự án được cập nhật |  | UC04.3 | Xóa dự án | User | Dự án tồn tại | Dự án bị xóa |  | UC04.4 | Chọn dự án | User | Có ít nhất 1 dự án | Hiển thị chi tiết dự án |  | UC04.5 | Thêm công việc (trong dự án) | User | Đang ở trong dự án | Công việc được thêm |  | UC04.6 | Sửa công việc (dự án) | User | Công việc tồn tại | Công việc được cập nhật |  | UC04.7 | Xóa công việc (dự án) | User | Công việc tồn tại | Công việc bị xóa |  | UC04.8 | Thêm thành viên | User | Dự án tồn tại | Thành viên được thêm |  | UC04.9 | Xóa thành viên | User | Thành viên tồn tại trong dự án | Thành viên bị xóa |  | 	
++ Luồng sự kiện Use Case quản lý dự án:
+Bảng 3-8: Luồng sự kiện Use Case quản lý dự án
+Use Case ID | Luồng chính (Main Flow) | Luồng phụ (Alternative Flow) |  | UC04
+Quản lý dự án | User đăng nhập
+2. Chọn “Quản lý dự án”3. Hệ thống hiển thị danh sách dự án4. User chọn thao tác | 1. Không có dự án → hiển thị trống2. Lỗi tải dữ liệu |  | UC04.1
+Thêm dự án | 1. Chọn “Thêm dự án”2. Nhập tên, mô tả3. Nhấn “Lưu”4. Lưu database5. Hiển thị thành công | 1. Thiếu tên → báo lỗi2. Lỗi lưu dữ liệu |  | UC04.2
+Sửa dự án | 1. Chọn dự án2. Chỉnh sửa thông tin3. Nhấn “Cập nhật”4. Lưu lại | 1. Dữ liệu không hợp lệ2. Lỗi hệ thống |  | UC04.3
+Xóa dự án | 1. Chọn dự án2. Nhấn “Xóa”3. Xác nhận4. Xóa khỏi DB | 1. Hủy xóa2. Lỗi database |  | UC04.4
+Chọn dự án | 1. Chọn dự án2. Hiển thị chi tiết (task + thành viên) | 1. Dự án không tồn tại |  | UC04.5
+Thêm công việc | 1. Chọn dự án2. Chọn “Thêm công việc”|3. Nhập thông tin4. Chọn thành viên5. Lưu | 1. Thiếu dữ liệu2. Không chọn thành viên |  | UC04.6
+Sửa công việc | 1. Chọn công việc2. Sửa thông tin3. Lưu | 1. Công việc không tồn tại |  | UC04.7
+Xóa công việc | Chọn công việc
+2. Nhấn xóa3. Xác nhận4. Xóa | 1. Hủy thao tác |  | UC04.8
+Thêm thành viên | 1. Chọn dự án2. Chọn “Thêm thành viên”3. Chọn user4. Lưu | 1. User đã tồn tại trong dự án |  | UC04.9
+Xóa thành viên | 1. Chọn thành viên2. Nhấn xóa3. Xác nhận | 1. Không tồn tại |  | 
+Biểu đồ lớp
+
+Hình 3-6: Biểu đồ lớp của hệ thống
+Mối quan hệ giữa các lớp trong hệ thống:
+1. NguoiDung – DanhMuc (Quan hệ Association)· Mô tả: Một người dùng có thể tạo hoặc quản lý nhiều danh mục, nhưng mỗi danh mục chỉ thuộc về một người dùng duy nhất (1 – *).· Ý nghĩa: Giúp phân loại và tổ chức các công việc của từng người dùng theo các danh mục khác nhau.
+2. NguoiDung – ThongBao (Quan hệ Association)· Mô tả: Một người dùng có thể nhận nhiều thông báo, nhưng mỗi thông báo chỉ gắn với một người dùng duy nhất (1 – *).· Ý nghĩa: Giúp hệ thống quản lý và gửi các thông báo liên quan đến công việc, nhóm hoặc các hoạt động của người dùng.
+3. NguoiDung – Nhom (Quan hệ Association)· Mô tả: Một người dùng có thể tạo hoặc quản lý nhiều nhóm, nhưng mỗi nhóm chỉ gắn với một người dùng duy nhất (1 – *).· Ý nghĩa: Xác định người chịu trách nhiệm tạo và quản lý các nhóm làm việc trong hệ thống.
+4. DanhMuc – CongViec (Quan hệ Association)· Mô tả: Một danh mục có thể chứa nhiều công việc, nhưng mỗi công việc chỉ thuộc về một danh mục duy nhất (1 – *).· Ý nghĩa: Giúp người dùng phân loại và quản lý các công việc theo từng danh mục cụ thể.
+5. CongViec – NhacNho (Quan hệ Aggregation)· Mô tả: Một công việc có thể có nhiều nhắc nhở, trong khi mỗi nhắc nhở gắn với một công việc (1 – *). Đây là quan hệ kết tập, trong đó CongViec đóng vai trò đối tượng chứa các NhacNho.· Ý nghĩa: Cho phép thiết lập nhiều thời điểm nhắc nhở cho một công việc, giúp người dùng hạn chế bỏ sót nhiệm vụ.
+6. Nhom – ThanhVienNhom (Quan hệ Aggregation)· Mô tả: Một nhóm có từ một đến nhiều thành viên (1 – 1..*), và mỗi bản ghi thành viên nhóm thuộc về một nhóm.· Ý nghĩa: Giúp quản lý danh sách thành viên tham gia từng nhóm, đồng thời lưu các thông tin như vai trò và ngày tham gia của thành viên.
+7. Nhom – CongViecNhom (Quan hệ Composition)· Mô tả: Một nhóm chứa các công việc nhóm và CongViecNhom phụ thuộc vào sự tồn tại của Nhom. Khi nhóm bị xóa, các công việc thuộc nhóm cũng bị xóa theo.· Ý nghĩa: Đảm bảo các công việc nhóm luôn được quản lý trong phạm vi của một nhóm cụ thể và duy trì tính toàn vẹn của dữ liệu.
+3.2.3 Thiết kế cơ sở dữ liệu
+Mô hình cơ sở dữ liệu quan hệ:
+
+Hình 3-7: Mô hình cơ sở dữ liệu
+
+
+
+
+
+3.2.4 Biểu đồ tuần tự
+Biểu đồ tuần tự chức năng sửa thông tin cá nhân
+
+Hình 3-8: Biểu đồ tuần tự chức năng sửa thông tin cá nhân
+Biểu đồ tuần tự chức năng thêm công việc
+
+Hình 3-9: Biểu đồ tuần tự chức năng thêm công việc
+Biểu đồ tuần tự chức năng thêm dự án
+
+Hình 3-10: Biểu đồ tuần tự chức năng thêm dự án
+Biểu đồ tuần tự chức năng thêm người dùng vào dự án
+
+Hình 3-11: Biểu đồ tuần tự chức năng thêm người dùng vào dự án
+
+
+Biểu đồ tuần tự chức năng thêm người dùng vào dự án
+
+Hình 3-12: Biểu đồ tuần tự chức năng đổi mật khẩu
+Biểu đồ tuần tự chức năng đăng nhập
+
+Hình 3-13: Biểu đồ tuần tự chức năng đăng nhập
+
+Thiết kế giao diện mobile
+3.3.1. Thiết kế giao diện đăng nhập
+
+Hình 3-14: Giao diện  đăng nhập
+3.3.2. Thiết kế giao diện đăng ký
+
+Hình 3-15: Giao diện trang đăng ký
+3.3.3. Thiết kế giao diện trang chủ
+
+Hình 3-16: Giao diện trang chủ
+3.3.4. Thiết kế giao diện công việc
+
+Hình 3-17: Giao diện thêm công việc
+3.3.5. Thiết kế giao diện lịch công việc
+
+Hình 3-18: Giao diện lịch công việc
+3.3.6. Thiết kế giao diện thống kê công việc
+
+Hình 3-19: Giao diện thống kê công việc
+3.3.7. Thiết kế giao diện cá nhân
+
+Hình 3-20: Giao diện cá nhân
+3.3.8. Thiết kế giao diện đăng nhập admin
+
+Hình 3-21: Giao diện đăng nhập admin
+3.3.9. Thiết kế giao diện quản lý tài khoản
+
+Hình 3-22: Giao diện quản lý tài khoản
+TRIỂN KHAI ỨNG DỤNG
+Môi trường và công nghệ phát triển
+Ứng dụng được triển khai theo mô hình client–server. Phần mobile sử dụng React Native và Expo để xây dựng giao diện, tiếp nhận thao tác và trao đổi dữ liệu. Backend sử dụng Node.js và Express để xử lý yêu cầu, kết hợp Sequelize và MySQL để quản lý dữ liệu.
+Android là môi trường sử dụng để kiểm tra trực tiếp. Mã nguồn frontend và backend được tổ chức riêng, giúp thuận tiện cấu hình, phát triển và bảo trì từng phần của hệ thống.
+Môi trường và công nghệ phát triển
+Các chức năng được triển khai theo những nhóm nghiệp vụ chính: tài khoản, công việc cá nhân, nhóm và theo dõi tiến độ. Trong các mục dưới, thuật ngữ “dự án” được sử dụng để chỉ nhóm công việc của ứng dụng.
+4.2.1 Chức năng đăng ký và đăng nhập
+Chức năng đăng ký cho phép người dùng tạo tài khoản, còn đăng nhập xác định tài khoản đang sử dụng và thiết lập phiên làm việc. Hệ thống kiểm tra dữ liệu, đối chiếu thông tin đăng nhập và phản hồi khi yêu cầu không hợp lệ.
+Mật khẩu được lưu dưới dạng băm. Sau khi đăng nhập, ứng dụng sử dụng thông tin phiên để thực hiện các thao tác cần xác thực và điều hướng người dùng vào khu vực làm việc.
+4.2.2. Quản lý thông tin cá nhân
+Khu vực cá nhân hiển thị thông tin tài khoản và tình hình công việc của người dùng. Người dùng có thể cập nhật hồ sơ và thay đổi thông tin bảo mật trong phạm vi tài khoản của mình.
+Các thay đổi được gửi tới backend để kiểm tra và lưu trữ. Giao diện hiển thị kết quả hoặc thông báo lỗi để người dùng biết trạng thái của thao tác.
+4.2.3. Quản lý công việc
+Quản lý công việc là chức năng trọng tâm của ứng dụng. Người dùng có thể tổ chức nhiệm vụ theo nội dung, thời hạn, mức độ ưu tiên và trạng thái thực hiện. Danh sách và bảng công việc hỗ trợ theo dõi các nhiệm vụ đang cần xử lý.
+Dữ liệu được cập nhật qua API và phản ánh lại trên giao diện sau khi thao tác hoàn tất. Các cơ chế hỗ trợ như lịch công việc và thùng rác giúp người dùng theo dõi thời hạn và xử lý những công việc đã xóa.
+4.2.4. Quản lý dự án
+Chức năng nhóm tạo không gian chung để nhiều người cùng tổ chức công việc. Mỗi nhóm có thông tin riêng, danh sách thành viên và các nhiệm vụ cần thực hiện.
+Người tạo nhóm giữ vai trò trưởng nhóm. Hệ thống sử dụng vai trò trong từng nhóm làm cơ sở xác định phạm vi thao tác, giúp tách biệt dữ liệu và trách nhiệm giữa các nhóm.
+4.2.5. Quản lý thành viên dự án
+Trưởng nhóm quản lý thành viên để xác định những người tham gia thực hiện công việc. Việc thêm hoặc thay đổi thành viên được backend kiểm tra theo quyền của tài khoản trong nhóm.
+Danh sách thành viên giúp người dùng nhận biết người tham gia và hỗ trợ lựa chọn người nhận khi giao nhiệm vụ. Các thay đổi về thành viên được xử lý cùng các dữ liệu liên quan để giữ sự nhất quán của nhóm.
+4.2.6. Quản lý công việc trong dự án
+Nhiệm vụ nhóm được triển khai nhằm hỗ trợ phân công công việc và theo dõi trách nhiệm thực hiện. Trưởng nhóm tạo nhiệm vụ và lựa chọn người nhận; trạng thái được cập nhật bởi tài khoản có quyền phù hợp.
+Các thông tin về nhiệm vụ và tiến độ được hiển thị trong khu vực nhóm. Việc kiểm tra thành viên và vai trò tại backend giúp hạn chế thao tác vượt phạm vi cho phép.
+4.2.7. Tìm kiếm và thống kê
+Tìm kiếm và lọc giúp người dùng nhanh chóng xác định công việc cần xử lý trong danh sách. Các thông tin tổng hợp về số lượng và trạng thái công việc giúp theo dõi tiến độ chung.
+Phần thống kê trong ứng dụng mang tính tổng quan, hỗ trợ nhận biết tình hình thực hiện nhiệm vụ. Đề tài chưa mở rộng thành hệ thống phân tích hoặc xuất báo cáo chuyên sâu.
+Triển khai cơ sở dữ liệu
+Cơ sở dữ liệu được tổ chức theo các đối tượng nghiệp vụ như tài khoản, công việc, nhóm và thành viên. Các mối quan hệ giữa bảng giúp liên kết dữ liệu và hỗ trợ truy xuất thông tin theo tài khoản hoặc nhóm.
+Backend quản lý việc đọc và ghi dữ liệu thông qua Sequelize. Những thay đổi cấu trúc được thực hiện bằng migration; các thao tác liên quan nhiều bản ghi sử dụng giao dịch khi cần bảo đảm tính nhất quán.
+Triển khai giao diện người dùng
+Giao diện được tổ chức theo các khu vực sử dụng chính, giúp người dùng dễ chuyển giữa công việc cá nhân, nhóm, lịch và hồ sơ. Các biểu mẫu và hộp thoại cung cấp cách nhập liệu, xác nhận thao tác và xem thông tin chi tiết.
+Quá trình triển khai chú trọng sự nhất quán về bố cục, màu sắc và cách phản hồi. Các trạng thái đang tải, không có dữ liệu hoặc gặp lỗi được thể hiện để người dùng hiểu kết quả và tiếp tục thao tác.
+Kiểm thử ứng dụng
+Kiểm thử tập trung vào khả năng đáp ứng các nghiệp vụ chính và sự phối hợp giữa giao diện, API và cơ sở dữ liệu. Các tình huống được xem xét bao gồm thao tác hợp lệ, dữ liệu sai, thiếu quyền và lỗi kết nối.
+Việc kiểm tra được thực hiện từng bước trong quá trình phát triển, kết hợp kiểm thử mã nguồn với thao tác trên ứng dụng. Kết quả giúp phát hiện vấn đề và điều chỉnh trước khi hoàn thiện sản phẩm.
+4.5.1. Kiểm thử chức năng
+Kiểm thử chức năng xem xét các luồng sử dụng chính từ thao tác trên giao diện đến kết quả xử lý của backend. Mục tiêu là xác định chức năng thực hiện đúng nghiệp vụ, phản hồi phù hợp và xử lý được các tình huống không hợp lệ.
+Những chức năng liên quan tài khoản hoặc nhóm cần được kiểm tra thêm về phạm vi truy cập, để phân biệt rõ thao tác được phép và thao tác bị từ chối.
+4.5.2. Kiểm thử dữ liệu
+Kiểm thử dữ liệu tập trung vào tính hợp lệ, mối quan hệ và sự nhất quán sau các thao tác tạo, sửa hoặc xóa. Những tình huống có giao dịch cần được kiểm tra cả khi thành công và khi phát sinh lỗi.
+Đối với thay đổi cấu trúc, migration được kiểm tra trên cơ sở dữ liệu thử nghiệm. Việc này giúp đánh giá khả năng áp dụng thay đổi mà không làm sai lệch dữ liệu hiện có.
+4.5.3. Kiểm thử giao diện
+Kiểm thử giao diện xem xét bố cục, khả năng đọc nội dung và sự thuận tiện khi nhập liệu trên điện thoại. Các màn hình cần được kiểm tra trong những trạng thái thường gặp như danh sách rỗng, nội dung dài, đang tải và hiển thị lỗi.
+Thao tác thực tế trên Android giúp phát hiện các vấn đề về kích thước thành phần, cuộn nội dung và phản hồi của ứng dụng mà kiểm thử mã nguồn chưa phản ánh đầy đủ.
+Triển khai ứng dụng
+Để sử dụng ứng dụng, backend và cơ sở dữ liệu cần hoạt động, đồng thời thiết bị mobile phải kết nối được tới dịch vụ API. Trong môi trường phát triển, ứng dụng Android còn cần kết nối với Metro để tải mã JavaScript.
+Khi triển khai, cấu hình kết nối được điều chỉnh theo môi trường sử dụng. Với bản phát hành, mã ứng dụng được đóng gói để chạy trên thiết bị; việc truy cập dữ liệu vẫn phụ thuộc vào khả năng kết nối tới backend.
+KẾT LUẬN
+Kết quả đạt được
+Sau quá trình nghiên cứu, phân tích và triển khai, đề tài đã hoàn thành việc xây dựng một ứng dụng di động hỗ trợ quản lý công việc trên nền tảng Android. Ứng dụng cho phép người dùng thực hiện các chức năng cơ bản như quản lý công việc cá nhân, quản lý dự án, phân công công việc và theo dõi tiến độ thực hiện.
+Hệ thống sử dụng MySQL tại backend để lưu trữ dữ liệu nghiệp vụ, kết hợp Sequelize và các ràng buộc quan hệ nhằm duy trì tính liên kết và toàn vẹn. Ứng dụng mobile trao đổi dữ liệu qua API để phục vụ quản lý tài khoản, công việc cá nhân và nhiệm vụ nhóm.
+Thông qua đề tài, người thực hiện đã vận dụng được các kiến thức về:
+Phân tích và thiết kế hệ thống (Use Case, ERD)
+Thiết kế cơ sở dữ liệu
+Lập trình ứng dụng Android bằng Java
+Xây dựng giao diện người dùng theo hướng thân thiện và dễ sử dụng
+Những hạn chế của đề tài
+Mặc dù đã đạt được một số kết quả nhất định, đề tài vẫn còn tồn tại một số hạn chế:
+Ứng dụng sử dụng MySQL tại backend để lưu trữ dữ liệu tập trung. Việc truy cập dữ liệu phụ thuộc vào kết nối mạng; hệ thống chưa hỗ trợ đầy đủ chế độ ngoại tuyến hoặc cập nhật đồng thời theo thời gian thực.
+Chưa tích hợp hệ thống thông báo (notification) để nhắc nhở công việc.
+Chưa có cơ chế phân quyền nâng cao cho nhiều vai trò như Manager, Admin.
+Giao diện vẫn còn ở mức cơ bản, chưa tối ưu hoàn toàn về trải nghiệm người dùng (UI/UX).
+Hướng phát triển của đề tài
+Trong tương lai, hệ thống có thể được phát triển và hoàn thiện hơn theo các hướng sau:
+Hoàn thiện backend và API hiện có, bổ sung cơ chế cập nhật dữ liệu theo thời gian thực và cải thiện khả năng xử lý khi nhiều người dùng thao tác đồng thời.
+Tích hợp chức năng nhắc việc (notification) nhằm nâng cao hiệu quả quản lý thời gian.
+Phát triển hệ thống phân quyền người dùng chi tiết hơn (Admin, Manager, User).
+Cải thiện giao diện theo chuẩn Material Design, tối ưu trải nghiệm người dùng.
+Mở rộng thêm các chức năng như: thống kê nâng cao, báo cáo công việc, chia sẻ công việc giữa nhiều người dùng.
+
+TÀI LIỆU THAM KHẢO
+x
+[1] | Lê Đình Thanh, Giáo trình Lập trình Android, Nhà xuất bản Đại học Quốc gia TP. Hồ Chí Minh, 2022. |  | [2] | Google Developers, Android Developer Documentation,  HYPERLINK "https://developer.android.com/docs" https://developer.android.com/docs, truy cập ngày 15/04/2025.
+
+
+
+
+
+
+
+
+	 |  | 
+
+
+
+ PAGE   \* MERGEFORMAT 2
+
+
+BÀI TẬP LỚN: PHÁT TRIỂN ỨNG DỤNG QUẢN LÝ CÔNG VIỆC CÁ NHÂN (TO-DO LIST)
+
+
+ PAGE   \* MERGEFORMAT 37
+
+
+
+

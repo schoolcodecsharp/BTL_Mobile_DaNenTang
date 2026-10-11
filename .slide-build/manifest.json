@@ -1,0 +1,1619 @@
+[
+  {
+    "slide": 1,
+    "title": "",
+    "items": [
+      {
+        "type": "text",
+        "text": "01",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image01.png",
+        "x": 1092.2794811320755,
+        "y": 44.99999999999999,
+        "w": 117.44103773584906,
+        "h": 115.00000000000001,
+        "alt": "Logo Trường Đại học Công nghệ Kỹ thuật Hưng Yên"
+      },
+      {
+        "type": "text",
+        "text": "BÀI TẬP LỚN MÔN LẬP TRÌNH MOBILE ĐA NỀN TẢNG",
+        "x": 64,
+        "y": 54,
+        "w": 965,
+        "h": 35,
+        "size": 21,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "PHÁT TRIỂN ỨNG DỤNG",
+        "x": 64,
+        "y": 148,
+        "w": 1120,
+        "h": 75,
+        "size": 58,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "QUẢN LÝ CÔNG VIỆC\nCÁ NHÂN",
+        "x": 64,
+        "y": 226,
+        "w": 1130,
+        "h": 165,
+        "size": 64,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "TO-DO LIST",
+        "x": 64,
+        "y": 413,
+        "w": 1080,
+        "h": 60,
+        "size": 40,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Nguyễn Văn Trường  ·  10123341\nTrần Bình Dương  ·  10123072",
+        "x": 64,
+        "y": 525,
+        "w": 600,
+        "h": 85,
+        "size": 24,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "GVHD: ThS. Vũ Xuân Thắng\nLớp: 12523W.1",
+        "x": 725,
+        "y": 525,
+        "w": 500,
+        "h": 85,
+        "size": 24,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Trường Đại học Công nghệ Kỹ thuật Hưng Yên, 2026",
+        "x": 64,
+        "y": 658,
+        "w": 1060,
+        "h": 28,
+        "size": 18,
+        "bold": false,
+        "color": "606777"
+      }
+    ]
+  },
+  {
+    "slide": 2,
+    "title": "Lý do chọn đề tài",
+    "items": [
+      {
+        "type": "text",
+        "text": "Lý do chọn đề tài",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "02",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Thông tin rời rạc khiến việc theo dõi\nnhiệm vụ và phối hợp nhóm khó hơn",
+        "x": 64,
+        "y": 150,
+        "w": 1140,
+        "h": 110,
+        "size": 40,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Dễ bỏ sót công việc",
+        "x": 64,
+        "y": 328,
+        "w": 350,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Nhiều nhiệm vụ có thời hạn\nvà mức ưu tiên khác nhau.",
+        "x": 64,
+        "y": 373,
+        "w": 350,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Khó nắm tiến độ",
+        "x": 465,
+        "y": 328,
+        "w": 350,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Thiếu một nơi tổng hợp\ntrạng thái thực hiện.",
+        "x": 465,
+        "y": 373,
+        "w": 350,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Phân công chưa rõ",
+        "x": 866,
+        "y": 328,
+        "w": 350,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Thành viên cần biết nhiệm vụ\nvà trách nhiệm của mình.",
+        "x": 866,
+        "y": 373,
+        "w": 350,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Giải pháp: quản lý công việc cá nhân và nhóm trong cùng một ứng dụng mobile.",
+        "x": 64,
+        "y": 561,
+        "w": 1110,
+        "h": 80,
+        "size": 28,
+        "bold": false,
+        "color": "554CEC"
+      }
+    ]
+  },
+  {
+    "slide": 3,
+    "title": "Mục tiêu và phạm vi",
+    "items": [
+      {
+        "type": "text",
+        "text": "Mục tiêu và phạm vi",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "03",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Mục tiêu",
+        "x": 64,
+        "y": 160,
+        "w": 570,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tổ chức nhiệm vụ, phân công công việc\nvà theo dõi tiến độ trên điện thoại.",
+        "x": 64,
+        "y": 205,
+        "w": 570,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Đối tượng",
+        "x": 700,
+        "y": 160,
+        "w": 515,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Người dùng cá nhân và các nhóm nhỏ\ntrong học tập, công việc.",
+        "x": 700,
+        "y": 205,
+        "w": 515,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Yêu cầu kỹ thuật",
+        "x": 64,
+        "y": 385,
+        "w": 570,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Kết nối giao diện với API và dữ liệu.\nKiểm tra đầu vào và quyền thao tác.",
+        "x": 64,
+        "y": 430,
+        "w": 570,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Phạm vi triển khai",
+        "x": 700,
+        "y": 385,
+        "w": 515,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Kiểm tra trực tiếp trên Android.\nDữ liệu nghiệp vụ cần kết nối backend.",
+        "x": 700,
+        "y": 430,
+        "w": 515,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      }
+    ]
+  },
+  {
+    "slide": 4,
+    "title": "Công nghệ và kiến trúc hệ thống",
+    "items": [
+      {
+        "type": "text",
+        "text": "Công nghệ và kiến trúc hệ thống",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "04",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Ứng dụng mobile",
+        "x": 64,
+        "y": 176,
+        "w": 360,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "React Native + Expo\nGiao diện và tương tác",
+        "x": 64,
+        "y": 221,
+        "w": 360,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Dịch vụ API",
+        "x": 462,
+        "y": 176,
+        "w": 370,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Node.js + Express\nXác thực và xử lý nghiệp vụ",
+        "x": 462,
+        "y": 221,
+        "w": 370,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Dữ liệu tập trung",
+        "x": 860,
+        "y": 176,
+        "w": 355,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Sequelize + MySQL\nTruy xuất và lưu trữ dữ liệu",
+        "x": 860,
+        "y": 221,
+        "w": 355,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "JavaScript",
+        "x": 64,
+        "y": 410,
+        "w": 530,
+        "h": 52,
+        "size": 36,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Ngôn ngữ chính ở mobile và backend.",
+        "x": 64,
+        "y": 477,
+        "w": 530,
+        "h": 95,
+        "size": 27,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "AsyncStorage",
+        "x": 700,
+        "y": 410,
+        "w": 515,
+        "h": 52,
+        "size": 36,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Lưu thông tin phiên và thiết lập cục bộ.",
+        "x": 700,
+        "y": 477,
+        "w": 515,
+        "h": 95,
+        "size": 27,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Mobile trao đổi dữ liệu với backend qua API theo mô hình client–server.",
+        "x": 64,
+        "y": 607,
+        "w": 1150,
+        "h": 45,
+        "size": 24,
+        "bold": false,
+        "color": "606777"
+      }
+    ]
+  },
+  {
+    "slide": 5,
+    "title": "Tác nhân và nhóm chức năng",
+    "items": [
+      {
+        "type": "text",
+        "text": "Tác nhân và nhóm chức năng",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "05",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image02.png",
+        "x": 64,
+        "y": 174.53431372549022,
+        "w": 745,
+        "h": 430.93137254901956,
+        "alt": "Biểu đồ Use Case tổng quát trong báo cáo"
+      },
+      {
+        "type": "text",
+        "text": "Người dùng",
+        "x": 852,
+        "y": 160,
+        "w": 363,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tài khoản, công việc cá nhân,\nnhóm và theo dõi tiến độ.",
+        "x": 852,
+        "y": 205,
+        "w": 363,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Trưởng nhóm",
+        "x": 852,
+        "y": 335,
+        "w": 363,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Quản lý thành viên và\nphân công nhiệm vụ.",
+        "x": 852,
+        "y": 380,
+        "w": 363,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Quản trị viên",
+        "x": 852,
+        "y": 510,
+        "w": 363,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Quản lý tài khoản người dùng\ntrong khu vực quản trị.",
+        "x": 852,
+        "y": 555,
+        "w": 363,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      }
+    ]
+  },
+  {
+    "slide": 6,
+    "title": "Thiết kế cơ sở dữ liệu",
+    "items": [
+      {
+        "type": "text",
+        "text": "Thiết kế cơ sở dữ liệu",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "06",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image08.png",
+        "x": 710.515228426396,
+        "y": 130,
+        "w": 443.96954314720807,
+        "h": 516,
+        "alt": "Mô hình cơ sở dữ liệu quan hệ trích từ báo cáo"
+      },
+      {
+        "type": "text",
+        "text": "Nghiệp vụ cá nhân",
+        "x": 64,
+        "y": 166,
+        "w": 550,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Người dùng, danh mục và công việc\nliên kết bằng khóa chính, khóa ngoại.",
+        "x": 64,
+        "y": 211,
+        "w": 550,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Nghiệp vụ nhóm",
+        "x": 64,
+        "y": 340,
+        "w": 550,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Nhóm, thành viên và công việc nhóm\nthể hiện người tham gia, người phụ trách.",
+        "x": 64,
+        "y": 385,
+        "w": 550,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Tính nhất quán",
+        "x": 64,
+        "y": 514,
+        "w": 550,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Sequelize quản lý truy xuất.\nMigration cập nhật cấu trúc dữ liệu.",
+        "x": 64,
+        "y": 559,
+        "w": 550,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      }
+    ]
+  },
+  {
+    "slide": 7,
+    "title": "Luồng xử lý thêm công việc",
+    "items": [
+      {
+        "type": "text",
+        "text": "Luồng xử lý thêm công việc",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "07",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image10.png",
+        "x": 142.70478170478168,
+        "y": 134,
+        "w": 994.5904365904366,
+        "h": 426,
+        "alt": "Biểu đồ tuần tự chức năng thêm công việc"
+      },
+      {
+        "type": "text",
+        "text": "Nhập thông tin",
+        "x": 64,
+        "y": 574,
+        "w": 350,
+        "h": 40,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Kiểm tra và lưu dữ liệu",
+        "x": 455,
+        "y": 574,
+        "w": 405,
+        "h": 40,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Phản hồi kết quả",
+        "x": 910,
+        "y": 574,
+        "w": 305,
+        "h": 40,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Thiếu dữ liệu hoặc lỗi lưu trữ: hiển thị thông báo để người dùng xử lý.",
+        "x": 64,
+        "y": 630,
+        "w": 1115,
+        "h": 35,
+        "size": 23,
+        "bold": false,
+        "color": "606777"
+      }
+    ]
+  },
+  {
+    "slide": 8,
+    "title": "Đăng ký, đăng nhập và hồ sơ",
+    "items": [
+      {
+        "type": "text",
+        "text": "Đăng ký, đăng nhập và hồ sơ",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "08",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Quản lý tài khoản",
+        "x": 64,
+        "y": 170,
+        "w": 380,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Đăng ký, đăng nhập\nvà thiết lập phiên làm việc.",
+        "x": 64,
+        "y": 215,
+        "w": 380,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Bảo vệ thông tin",
+        "x": 64,
+        "y": 350,
+        "w": 380,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Lưu mật khẩu dạng băm.\nKiểm tra dữ liệu tại backend.",
+        "x": 64,
+        "y": 395,
+        "w": 380,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Hồ sơ cá nhân",
+        "x": 64,
+        "y": 530,
+        "w": 380,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Cập nhật thông tin\nvà thay đổi mật khẩu.",
+        "x": 64,
+        "y": 575,
+        "w": 380,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image15.png",
+        "x": 489,
+        "y": 201.11340206185568,
+        "w": 219,
+        "h": 371.77319587628864,
+        "alt": "Giao diện đăng nhập"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image16.png",
+        "x": 738,
+        "y": 150.6996402877698,
+        "w": 219,
+        "h": 476.6007194244604,
+        "alt": "Giao diện đăng ký"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image21.png",
+        "x": 988.5771756978653,
+        "y": 150,
+        "w": 215.84564860426931,
+        "h": 478,
+        "alt": "Giao diện hồ sơ cá nhân"
+      },
+      {
+        "type": "text",
+        "text": "Đăng nhập",
+        "x": 489,
+        "y": 638,
+        "w": 219,
+        "h": 28,
+        "size": 19,
+        "bold": true,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Đăng ký",
+        "x": 738,
+        "y": 638,
+        "w": 219,
+        "h": 28,
+        "size": 19,
+        "bold": true,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Hồ sơ",
+        "x": 987,
+        "y": 638,
+        "w": 219,
+        "h": 28,
+        "size": 19,
+        "bold": true,
+        "color": "606777"
+      }
+    ]
+  },
+  {
+    "slide": 9,
+    "title": "Quản lý công việc cá nhân",
+    "items": [
+      {
+        "type": "text",
+        "text": "Quản lý công việc cá nhân",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "09",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image18.png",
+        "x": 867.2457337883959,
+        "y": 137,
+        "w": 247.5085324232082,
+        "h": 518,
+        "alt": "Danh sách công việc cá nhân"
+      },
+      {
+        "type": "text",
+        "text": "Tạo và tổ chức nhiệm vụ",
+        "x": 64,
+        "y": 168,
+        "w": 710,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tiêu đề, mô tả, danh mục, thời hạn\nvà mức độ ưu tiên.",
+        "x": 64,
+        "y": 213,
+        "w": 710,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Cập nhật tiến độ",
+        "x": 64,
+        "y": 337,
+        "w": 710,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Chưa làm, đang làm, hoàn thành.\nTheo dõi qua danh sách hoặc bảng.",
+        "x": 64,
+        "y": 382,
+        "w": 710,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Tìm kiếm và xử lý công việc",
+        "x": 64,
+        "y": 506,
+        "w": 710,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tìm kiếm, lọc danh sách và chỉnh sửa.\nThùng rác hỗ trợ quản lý mục đã xóa.",
+        "x": 64,
+        "y": 551,
+        "w": 710,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      }
+    ]
+  },
+  {
+    "slide": 10,
+    "title": "Cộng tác và phân công trong nhóm",
+    "items": [
+      {
+        "type": "text",
+        "text": "Cộng tác và phân công trong nhóm",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "10",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image20.png",
+        "x": 867.9208992506245,
+        "y": 137,
+        "w": 250.15820149875103,
+        "h": 518,
+        "alt": "Giao diện thành viên và quản lý nhóm"
+      },
+      {
+        "type": "text",
+        "text": "Không gian làm việc chung",
+        "x": 64,
+        "y": 168,
+        "w": 705,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Mỗi nhóm có thông tin, thành viên\nvà danh sách nhiệm vụ riêng.",
+        "x": 64,
+        "y": 213,
+        "w": 705,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Trưởng nhóm phân công",
+        "x": 64,
+        "y": 337,
+        "w": 705,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tạo nhiệm vụ, lựa chọn người nhận\nvà quản lý danh sách thành viên.",
+        "x": 64,
+        "y": 382,
+        "w": 705,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Quyền gắn với từng nhóm",
+        "x": 64,
+        "y": 506,
+        "w": 705,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Backend kiểm tra vai trò và thành viên\ntrước khi cho phép thao tác.",
+        "x": 64,
+        "y": 551,
+        "w": 705,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      }
+    ]
+  },
+  {
+    "slide": 11,
+    "title": "Lịch công việc và theo dõi tiến độ",
+    "items": [
+      {
+        "type": "text",
+        "text": "Lịch công việc và theo dõi tiến độ",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "11",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Theo dõi thời hạn",
+        "x": 64,
+        "y": 190,
+        "w": 495,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Xem công việc theo ngày\ntrên lịch của ứng dụng.",
+        "x": 64,
+        "y": 235,
+        "w": 495,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Nắm tình hình thực hiện",
+        "x": 64,
+        "y": 388,
+        "w": 495,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tổng hợp số lượng và trạng thái.\nTìm nhanh công việc cần xử lý.",
+        "x": 64,
+        "y": 433,
+        "w": 495,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Thống kê hiện ở mức tổng quan.",
+        "x": 64,
+        "y": 593,
+        "w": 520,
+        "h": 60,
+        "size": 25,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image19.png",
+        "x": 635.4166666666666,
+        "y": 140,
+        "w": 249.16666666666669,
+        "h": 520,
+        "alt": "Giao diện lịch công việc"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image17.png",
+        "x": 939.5842235004109,
+        "y": 140,
+        "w": 244.8315529991783,
+        "h": 520,
+        "alt": "Trang chủ hiển thị tiến độ và công việc"
+      }
+    ]
+  },
+  {
+    "slide": 12,
+    "title": "Giao diện quản trị tài khoản",
+    "items": [
+      {
+        "type": "text",
+        "text": "Giao diện quản trị tài khoản",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "12",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "image",
+        "path": "D:\\BTL_Mobile_Da_Nen_Tang\\.slide-build\\assets\\image23.png",
+        "x": 210.3407290015848,
+        "y": 149.00000000000003,
+        "w": 859.3185419968304,
+        "h": 429.99999999999994,
+        "alt": "Giao diện quản lý tài khoản người dùng"
+      },
+      {
+        "type": "text",
+        "text": "Danh sách người dùng",
+        "x": 64,
+        "y": 605,
+        "w": 370,
+        "h": 45,
+        "size": 27,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Thêm và sửa thông tin",
+        "x": 458,
+        "y": 605,
+        "w": 390,
+        "h": 45,
+        "size": 27,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Xác nhận trước khi xóa",
+        "x": 864,
+        "y": 605,
+        "w": 355,
+        "h": 45,
+        "size": 27,
+        "bold": true,
+        "color": "554CEC"
+      }
+    ]
+  },
+  {
+    "slide": 13,
+    "title": "Kiểm thử ứng dụng",
+    "items": [
+      {
+        "type": "text",
+        "text": "Kiểm thử ứng dụng",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "13",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Chức năng",
+        "x": 64,
+        "y": 182,
+        "w": 350,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Luồng hợp lệ, dữ liệu sai,\nthiếu quyền và lỗi kết nối.",
+        "x": 64,
+        "y": 227,
+        "w": 350,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Dữ liệu",
+        "x": 465,
+        "y": 182,
+        "w": 350,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tạo, sửa, xóa và quan hệ bảng.\nGiao dịch, migration thử nghiệm.",
+        "x": 465,
+        "y": 227,
+        "w": 350,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Giao diện Android",
+        "x": 866,
+        "y": 182,
+        "w": 350,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Danh sách rỗng, nội dung dài,\nđang tải và thông báo lỗi.",
+        "x": 866,
+        "y": 227,
+        "w": 350,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Kiểm tra xuyên suốt từ thao tác\ntrên mobile đến dữ liệu tại backend",
+        "x": 64,
+        "y": 430,
+        "w": 1150,
+        "h": 130,
+        "size": 42,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Kết hợp kiểm thử mã nguồn với thao tác trực tiếp trên ứng dụng.",
+        "x": 64,
+        "y": 604,
+        "w": 1120,
+        "h": 45,
+        "size": 26,
+        "bold": false,
+        "color": "606777"
+      }
+    ]
+  },
+  {
+    "slide": 14,
+    "title": "Kết quả đạt được và hạn chế",
+    "items": [
+      {
+        "type": "text",
+        "text": "Kết quả đạt được và hạn chế",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "14",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Kết quả đạt được",
+        "x": 64,
+        "y": 166,
+        "w": 550,
+        "h": 48,
+        "size": 34,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Ứng dụng quản lý công việc trên Android.\n\nHỗ trợ nhiệm vụ cá nhân, nhóm\nvà theo dõi tiến độ.\n\nKết nối mobile, API và MySQL.",
+        "x": 64,
+        "y": 240,
+        "w": 548,
+        "h": 337,
+        "size": 27,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Hạn chế hiện tại",
+        "x": 700,
+        "y": 166,
+        "w": 515,
+        "h": 48,
+        "size": 34,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Phụ thuộc kết nối mạng.\n\nChưa đầy đủ offline và thời gian thực.\n\nChưa tích hợp thông báo nhắc việc.\n\nPhân quyền nâng cao và UI/UX\ncần tiếp tục hoàn thiện.",
+        "x": 700,
+        "y": 240,
+        "w": 515,
+        "h": 370,
+        "size": 26,
+        "bold": false,
+        "color": "20213B"
+      }
+    ]
+  },
+  {
+    "slide": 15,
+    "title": "Hướng phát triển",
+    "items": [
+      {
+        "type": "text",
+        "text": "Hướng phát triển",
+        "x": 64,
+        "y": 44,
+        "w": 1152,
+        "h": 70,
+        "size": 44,
+        "bold": true,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "15",
+        "x": 1175,
+        "y": 672,
+        "w": 45,
+        "h": 25,
+        "size": 16,
+        "bold": false,
+        "color": "606777"
+      },
+      {
+        "type": "text",
+        "text": "Hoàn thiện chức năng",
+        "x": 64,
+        "y": 164,
+        "w": 550,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Thông báo nhắc việc và cập nhật\ndữ liệu theo thời gian thực.",
+        "x": 64,
+        "y": 209,
+        "w": 550,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Mở rộng phân quyền",
+        "x": 700,
+        "y": 164,
+        "w": 515,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Quyền chi tiết cho Admin,\nManager và User.",
+        "x": 700,
+        "y": 209,
+        "w": 515,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Cải thiện trải nghiệm",
+        "x": 64,
+        "y": 373,
+        "w": 550,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Tối ưu UI/UX theo Material Design,\nnâng cấp thống kê và báo cáo.",
+        "x": 64,
+        "y": 418,
+        "w": 550,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "Tăng khả năng cộng tác",
+        "x": 700,
+        "y": 373,
+        "w": 515,
+        "h": 38,
+        "size": 28,
+        "bold": true,
+        "color": "554CEC"
+      },
+      {
+        "type": "text",
+        "text": "Cải thiện xử lý đồng thời\nvà chia sẻ công việc.",
+        "x": 700,
+        "y": 418,
+        "w": 515,
+        "h": 105,
+        "size": 25,
+        "bold": false,
+        "color": "20213B"
+      },
+      {
+        "type": "text",
+        "text": "CẢM ƠN THẦY CÔ ĐÃ LẮNG NGHE",
+        "x": 64,
+        "y": 602,
+        "w": 1130,
+        "h": 52,
+        "size": 34,
+        "bold": true,
+        "color": "554CEC"
+      }
+    ]
+  }
+]

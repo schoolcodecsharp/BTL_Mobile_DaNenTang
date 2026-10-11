@@ -1,6 +1,15 @@
 import { apiFetch } from './api';
 import { changeTaskReminder, reminderRevision, reportReminderError, syncTaskReminders, readTaskReminderOptions, saveTaskReminderOptions } from './task-reminders';
 
+function queueReminderChange(userId, task, offsets) {
+  const updates = [];
+  if (Array.isArray(offsets)) updates.push(saveTaskReminderOptions(userId, task.id, offsets));
+  // Both helpers share a serial queue. Enqueue them now, in this order, so a
+  // later delete cannot be overtaken by an update waiting to save preferences.
+  updates.push(changeTaskReminder(userId, task));
+  void Promise.all(updates).catch(reportReminderError);
+}
+
 /**
  * Lấy danh sách công việc của user.
  * @param {number} userId
@@ -9,7 +18,8 @@ export async function getTasks(userId) {
   const revision = reminderRevision();
   const tasks = await apiFetch(`/api/users/${userId}/tasks`);
   const options = await readTaskReminderOptions(userId);
-  await syncTaskReminders(userId, tasks ?? [], revision).catch(reportReminderError);
+  // Native notification work must not block displaying a successful API result.
+  void syncTaskReminders(userId, tasks ?? [], revision).catch(reportReminderError);
   return (tasks ?? []).map(task => ({ ...task, nhacTruoc: options[String(task.id)] }));
 }
 
@@ -20,8 +30,7 @@ export async function getTasks(userId) {
  */
 export async function createTask(userId, payload) {
   const task = await apiFetch(`/api/users/${userId}/tasks`, { method: 'POST', body: payload });
-  if (Array.isArray(payload.reminderOffsets)) await saveTaskReminderOptions(userId, task.id, payload.reminderOffsets).catch(reportReminderError);
-  await changeTaskReminder(userId, task).catch(reportReminderError);
+  queueReminderChange(userId, task, payload.reminderOffsets);
   return task;
 }
 
@@ -33,12 +42,11 @@ export async function createTask(userId, payload) {
  */
 export async function updateTask(userId, taskId, payload) {
   const result = await apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'PUT', body: payload });
-  if (Array.isArray(payload.reminderOffsets)) await saveTaskReminderOptions(userId, taskId, payload.reminderOffsets).catch(reportReminderError);
   // The update endpoint returns 204; use its replacement payload for the reminder.
-  await changeTaskReminder(userId, {
+  queueReminderChange(userId, {
     id: taskId, tieuDe: payload.title, hanHoanThanh: payload.dueDate,
     trangThai: payload.status ?? 'CHUA_LAM',
-  }).catch(reportReminderError);
+  }, payload.reminderOffsets);
   return result;
 }
 
@@ -49,7 +57,7 @@ export async function updateTask(userId, taskId, payload) {
  */
 export async function deleteTask(userId, taskId) {
   const result = await apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'DELETE' });
-  await changeTaskReminder(userId, { id: taskId }, true).catch(reportReminderError);
+  void changeTaskReminder(userId, { id: taskId }, true).catch(reportReminderError);
   return result;
 }
 

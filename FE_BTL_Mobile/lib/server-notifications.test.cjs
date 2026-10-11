@@ -4,15 +4,21 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 function harness() {
-  const state = { list: [], active: true, enabled: true, fail: false, delivered: [], storage: new Map() };
+  const state = { list: [], active: true, ready: true, enabled: true, fail: false,
+    delivered: [], storage: new Map(), fetched: 0, operations: [] };
   const source = fs.readFileSync(require.resolve('./server-notifications.js'), 'utf8')
     .replace(/^import .*;\r?\n/gm, '').replace(/export /g, '')
     + '\nmodule.exports = { createServerNotificationPoller };';
   const context = { module: { exports: {} },
     AsyncStorage: { async getItem(key) { return state.storage.get(key) ?? null; },
       async setItem(key, value) { state.storage.set(key, value); } },
-    getNotifications: async () => state.list,
-    getReminderState: () => state.enabled,
+    getNotifications: async () => { state.fetched++; state.onFetch?.(); return state.list; },
+    getReminderStatus: (userId) => ({ ready: userId === 7 && state.ready, enabled: state.enabled }),
+    runNotificationOperation: async (label, work) => {
+      state.operations.push(label);
+      if (state.timeoutLabel === label) throw new Error('native timeout');
+      return work();
+    },
     notificationsModule: async () => ({ AndroidImportance: { HIGH: 4 },
       async setNotificationChannelAsync() {},
       async scheduleNotificationAsync(notification) {
@@ -63,5 +69,50 @@ test('no polling or delivery after logout/background', async () => {
   assert.equal(h.delivered.length, 0);
   assert.equal(h.storage.get('server-notification-cursor-v1:7'), '0');
   h.active = true; await h.poll();
+  assert.equal(h.delivered.length, 1);
+});
+
+test('initializing reminder preferences does not fetch or consume the notification cursor', async () => {
+  const h = harness(); await h.poll();
+  h.ready = false; h.enabled = false; h.list = [event(1)];
+  const before = h.fetched;
+  await h.poll();
+  assert.equal(h.fetched, before);
+  assert.equal(h.storage.get('server-notification-cursor-v1:7'), '0');
+  h.ready = true; h.enabled = true;
+  await h.poll();
+  assert.equal(h.delivered.length, 1);
+});
+
+test('account readiness lost during fetch leaves new events retryable', async () => {
+  const h = harness(); await h.poll(); h.list = [event(1)];
+  h.onFetch = () => { h.ready = false; };
+  await h.poll();
+  assert.equal(h.storage.get('server-notification-cursor-v1:7'), '0');
+  assert.equal(h.delivered.length, 0);
+  h.onFetch = undefined; h.ready = true;
+  await h.poll();
+  assert.equal(h.delivered.length, 1);
+});
+
+test('every native operation is bounded and a timeout leaves delivery retryable', async () => {
+  const h = harness(); await h.poll(); h.list = [event(1)];
+  h.timeoutLabel = 'Tạo kênh thông báo nhóm';
+  await assert.rejects(h.poll(), /native timeout/);
+  assert.equal(h.storage.get('server-notification-cursor-v1:7'), '0');
+  h.timeoutLabel = undefined;
+  await h.poll();
+  assert.equal(h.delivered.length, 1);
+  assert.ok(h.operations.includes('Mở thông báo nhóm'));
+  assert.ok(h.operations.includes('Tạo kênh thông báo nhóm'));
+  assert.ok(h.operations.includes('Gửi thông báo nhóm'));
+});
+
+test('a corrupt persisted cursor resets to a quiet baseline rather than blocking all future events', async () => {
+  const h = harness(); h.storage.set('server-notification-cursor-v1:7', 'bad');
+  h.list = [event(1)]; await h.poll();
+  assert.equal(h.delivered.length, 0);
+  assert.equal(h.storage.get('server-notification-cursor-v1:7'), '1');
+  h.list = [event(2), event(1)]; await h.poll();
   assert.equal(h.delivered.length, 1);
 });

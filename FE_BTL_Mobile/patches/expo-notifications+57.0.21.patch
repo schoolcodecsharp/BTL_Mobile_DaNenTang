@@ -1,0 +1,22 @@
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationsService.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationsService.kt
+index 74554be..14c9e73 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationsService.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/NotificationsService.kt
+@@ -386,6 +386,8 @@ open class NotificationsService : BroadcastReceiver() {
+     fun doWork(context: Context, intent: Intent) {
+       findDesignatedBroadcastReceiver(context, intent)?.let {
+         intent.component = ComponentName(it.packageName, it.name)
++        // Keep user-visible notification operations off a delayed background queue.
++        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+         context.sendBroadcast(intent)
+         return
+       }
+@@ -422,6 +424,8 @@ open class NotificationsService : BroadcastReceiver() {
+           .appendPath("trigger")
+           .build()
+       ).also { intent ->
++        // Scheduled alarms need prompt delivery through the same foreground queue.
++        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+         findDesignatedBroadcastReceiver(context, intent)?.let {
+           intent.component = ComponentName(it.packageName, it.name)
+         }

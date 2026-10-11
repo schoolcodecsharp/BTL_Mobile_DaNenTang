@@ -11,7 +11,9 @@ export async function readHistory(userId) {
 export function recordNotification(notification) {
   const request = notification?.request;
   const data = request?.content?.data;
-  if (!request?.identifier?.startsWith('task-reminder:') || !data?.userId) return Promise.resolve();
+  const isReminder = request?.identifier?.startsWith('task-reminder:');
+  const isTest = request?.identifier?.startsWith('task-reminder-test:') && data?.test === true;
+  if ((!isReminder && !isTest) || !data?.userId) return Promise.resolve();
   const userId = String(data.userId);
   const id = `${request.identifier}:${data.due ?? notification.date}`;
   const next = queue.catch(() => {}).then(async () => {
