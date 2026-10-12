@@ -2,8 +2,8 @@
 
 ## Địa chỉ hiện tại
 
-- Backend trên máy tính: `http://192.168.1.5:5257`
-- Swagger: `http://192.168.1.5:5257/api-docs/`
+- Backend trên máy tính: `http://192.168.1.3:5257`
+- Swagger: `http://192.168.1.3:5257/api-docs/`
 - Máy tính và điện thoại phải cùng Wi-Fi. Backend và MySQL phải chạy khi sử dụng ứng dụng.
 
 ## Chạy lại backend
@@ -22,8 +22,8 @@ Nếu MySQL đang tắt, hãy khởi động MySQL trước khi chạy các lệ
 
 ## Sử dụng APK
 
-APK đã cấu hình cho IP hiện tại: `FE_BTL_Mobile/dist/To-Do-List-192.168.1.5.apk`.
-Bản này chứa bundle FE hiện tại và cấu hình HTTP đến `192.168.1.5`,
+APK đã cấu hình cho IP hiện tại: `FE_BTL_Mobile/dist/To-Do-List-192.168.1.3.apk`.
+Bản này chứa bundle FE hiện tại và cấu hình HTTP đến `192.168.1.3`,
 được đóng gói lại từ APK release gốc, kiểm tra tương thích Hermes và ký bằng cùng khóa thử nghiệm.
 Hai đường gửi broadcast nội bộ của thông báo Android được sửa để dùng hàng đợi foreground;
 không thay đổi quyền, dữ liệu ứng dụng hoặc các thư viện native khác.
