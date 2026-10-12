@@ -2,7 +2,7 @@ import { useFocusEffect , useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,7 +25,9 @@ import { KanbanBoard } from '@/components/kanban-board';
 import { TaskTrash } from '@/components/task-trash';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DEFAULT_OFFSETS, REMINDER_OPTIONS } from '@/lib/reminder-plan.cjs';
-import { createTask, deleteTask, getTasks, updateTask } from '@/lib/tasks-api';
+import { createTask, deleteTask, getTasks, trashCompletedTasks, updateTask } from '@/lib/tasks-api';
+import { confirmAction } from '@/lib/confirm-action';
+import { isRecurringTask } from '@/lib/task-cohorts.cjs';
 
 const PRIORITY_OPTIONS = [
   { value: 'CAO', label: 'Cao', color: '#EF4444' },
@@ -94,6 +96,11 @@ export default function TasksScreen() {
   const [taskList, setTaskList] = useState('regular');
   const [movingId, setMovingId] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [deletingId, setDeletingId] = useState(null);
+  const [cleaningCompleted, setCleaningCompleted] = useState(false);
+  const [notice, setNotice] = useState('');
+  const deletingRef = useRef(false);
 
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC',
@@ -104,6 +111,8 @@ export default function TasksScreen() {
     primary: '#5B5CE2',
     iconBg: isDark ? '#282A62' : '#EEF2FF',
     separator: isDark ? '#25324A' : '#EFF1F5',
+    danger: isDark ? '#FDA4AF' : '#BE123C',
+    notice: isDark ? '#A5B4FC' : '#5B5CE2',
   };
 
   const fetchTasks = useCallback(async (isRefresh = false) => {
@@ -230,20 +239,57 @@ export default function TasksScreen() {
     }
   }
 
-  async function handleDelete(task) {
-    Alert.alert('Xóa công việc', `Xóa "${task.tieuDe}"?`, [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Xóa', style: 'destructive', onPress: async () => {
-          try {
-            await deleteTask(user.id, task.id);
-            await fetchTasks();
-          } catch (err) {
-            Alert.alert('Lỗi', err.message);
-          }
-        },
+  function handleDelete(task) {
+    if (!user?.id || deletingRef.current) return;
+    confirmAction({
+      title: 'Chuyển vào Thùng rác?',
+      message: `“${task.tieuDe}” sẽ rời danh sách công việc. Bạn có thể khôi phục trong 30 ngày.`,
+      confirmText: 'Chuyển vào Thùng rác',
+      destructive: true,
+      onConfirm: async () => {
+        if (deletingRef.current) return;
+        deletingRef.current = true; setDeletingId(task.id); setError(''); setNotice('');
+        try {
+          await deleteTask(user.id, task.id);
+          setTasks(current => current.filter(item => item.id !== task.id));
+          setNotice('Đã chuyển công việc vào Thùng rác.');
+          await fetchTasks();
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          deletingRef.current = false; setDeletingId(null);
+        }
       },
-    ]);
+    });
+  }
+
+  function handleCleanupCompleted() {
+    if (!user?.id || deletingRef.current || !completedTasks.length) return;
+    // Snapshot exactly what the user is confirming, not tasks completed later.
+    const taskIds = completedTasks.map(task => task.id);
+    confirmAction({
+      title: 'Dọn công việc đã hoàn thành?',
+      message: `Chuyển ${taskIds.length} công việc đã hoàn thành trong mục ${taskList === 'recurring' ? 'Lặp lại' : 'Công việc'} vào Thùng rác? Công việc chưa xong không bị ảnh hưởng. Bạn có thể khôi phục trong 30 ngày.`,
+      confirmText: 'Chuyển vào Thùng rác',
+      destructive: true,
+      onConfirm: async () => {
+        if (deletingRef.current) return;
+        deletingRef.current = true; setCleaningCompleted(true); setError(''); setNotice('');
+        try {
+          const result = await trashCompletedTasks(user.id, taskIds);
+          const moved = new Set(result.taskIds);
+          setTasks(current => current.filter(task => !moved.has(task.id)));
+          setNotice(result.movedCount
+            ? `Đã chuyển ${result.movedCount} công việc vào Thùng rác. Có thể khôi phục trong 30 ngày.`
+            : 'Không còn công việc phù hợp để dọn. Danh sách đã được cập nhật.');
+          await fetchTasks();
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          deletingRef.current = false; setCleaningCompleted(false);
+        }
+      },
+    });
   }
 
   const handleMoveTask = useCallback(async (task, status) => {
@@ -272,9 +318,12 @@ export default function TasksScreen() {
     }
   }, [fetchTasks, movingId, user]);
 
-  const recurringTasks = tasks.filter(task => task.lapLai && task.lapLai !== 'KHONG');
-  const regularTasks = tasks.filter(task => !task.lapLai || task.lapLai === 'KHONG');
-  const listedTasks = taskList === 'recurring' ? recurringTasks : regularTasks;
+  const recurringTasks = tasks.filter(isRecurringTask);
+  const regularTasks = tasks.filter(task => !isRecurringTask(task));
+  const selectedTasks = taskList === 'recurring' ? recurringTasks : regularTasks;
+  const completedTasks = selectedTasks.filter(task => task.trangThai === 'HOAN_THANH');
+  const listedTasks = selectedTasks.filter(task => statusFilter === 'all' ||
+    (statusFilter === 'completed' ? task.trangThai === 'HOAN_THANH' : task.trangThai !== 'HOAN_THANH'));
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -311,6 +360,30 @@ export default function TasksScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.taskToolbar}>
+        {[
+          ['all', 'Tất cả', selectedTasks.length],
+          ['open', 'Chưa xong', selectedTasks.length - completedTasks.length],
+          ['completed', 'Hoàn thành', completedTasks.length],
+        ].map(([value, label, count]) => <TouchableOpacity key={value}
+          accessibilityRole="button" accessibilityState={{ selected: statusFilter === value }}
+          onPress={() => { setStatusFilter(value); setNotice(''); }}
+          style={[styles.statusFilter, { backgroundColor: statusFilter === value ? theme.primary : theme.surface }]}>
+          <Text style={{ color: statusFilter === value ? '#FFFFFF' : theme.text, fontWeight: '700', fontSize: 12 }}>{label} ({count})</Text>
+        </TouchableOpacity>)}
+      </View>
+      {statusFilter === 'completed' && completedTasks.length > 0 && <View style={styles.taskToolbar}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dọn công việc đã hoàn thành"
+          disabled={cleaningCompleted || deletingId !== null || movingId !== null || loading}
+          onPress={handleCleanupCompleted}
+          style={[styles.cleanupButton, { backgroundColor: theme.surface, borderColor: theme.border,
+            opacity: cleaningCompleted || deletingId !== null || movingId !== null || loading ? 0.55 : 1 }]}>
+          {cleaningCompleted ? <ActivityIndicator size="small" color={theme.danger} /> : <Ionicons name="trash-outline" size={18} color={theme.danger} />}
+          <Text style={{ color: theme.danger, fontWeight: '700', fontSize: 13 }}>{cleaningCompleted ? 'Đang chuyển…' : `Chuyển ${completedTasks.length} việc vào Thùng rác`}</Text>
+        </TouchableOpacity>
+      </View>}
+      {!!notice && <Text accessibilityLiveRegion="polite" style={[styles.taskNotice, { color: theme.notice }]}>{notice}</Text>}
+
       {/* Error */}
       {!!error && (
         <View style={[styles.errorBox, { backgroundColor: isDark ? '#450A0A' : '#FFF1F2', borderColor: '#FECDD3', marginHorizontal: 20 }]}>
@@ -337,8 +410,8 @@ export default function TasksScreen() {
           {listedTasks.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: theme.surface, borderColor: theme.border }]}>
               <Ionicons name="clipboard-outline" size={42} color={theme.muted} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>{taskList === 'recurring' ? 'Chưa có công việc lặp lại' : 'Chưa có công việc làm một lần'}</Text>
-              <Text style={[styles.emptyText, { color: theme.muted }]}>{taskList === 'recurring' ? 'Nhấn + để tạo công việc hằng ngày, hằng tuần hoặc hằng tháng.' : 'Nhấn nút + để tạo công việc đầu tiên.'}</Text>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>{statusFilter === 'completed' ? 'Chưa có công việc hoàn thành' : statusFilter === 'open' ? 'Không còn công việc chưa xong' : taskList === 'recurring' ? 'Chưa có công việc lặp lại' : 'Chưa có công việc làm một lần'}</Text>
+              <Text style={[styles.emptyText, { color: theme.muted }]}>{statusFilter === 'completed' ? 'Việc đã dọn nằm trong Thùng rác. Bạn có thể khôi phục tại đó.' : statusFilter === 'open' ? 'Chọn Tất cả hoặc Hoàn thành để xem các công việc khác.' : taskList === 'recurring' ? 'Nhấn + để tạo công việc hằng ngày, hằng tuần hoặc hằng tháng.' : 'Nhấn nút + để tạo công việc đầu tiên.'}</Text>
             </View>
           ) : (
             listedTasks.map((task) => {
@@ -378,8 +451,11 @@ export default function TasksScreen() {
                       {task.lapLai && task.lapLai !== 'KHONG' && <View style={styles.metaItem}><Ionicons name="repeat-outline" size={12} color={theme.primary} /><Text style={[styles.metaText, { color: theme.primary }]}>{RECURRENCE_OPTIONS.find(option => option.value === task.lapLai)?.label || 'Lặp lại'}</Text></View>}
                     </View>
                   </View>
-                  <TouchableOpacity onPress={() => handleDelete(task)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="trash-outline" size={19} color="#E11D48" />
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Chuyển ${task.tieuDe} vào Thùng rác`}
+                    disabled={deletingId !== null || cleaningCompleted}
+                    onPress={(event) => { event.stopPropagation(); handleDelete(task); }}
+                    style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', opacity: deletingId !== null || cleaningCompleted ? 0.55 : 1 }}>
+                    {deletingId === task.id ? <ActivityIndicator size="small" color="#E11D48" /> : <Ionicons name="trash-outline" size={19} color="#E11D48" />}
                   </TouchableOpacity>
                 </TouchableOpacity>
               );
@@ -606,6 +682,9 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 1.4, marginBottom: 4 },
   pageTitle: { fontSize: 25, fontWeight: '800', letterSpacing: -0.5 },
   taskToolbar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 20, marginBottom: 12 },
+  statusFilter: { flex: 1, minHeight: 44, paddingHorizontal: 6, paddingVertical: 10, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cleanupButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
+  taskNotice: { paddingHorizontal: 20, marginBottom: 12, fontSize: 13, lineHeight: 19 },
   trashButton: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, minHeight: 44, borderRadius: 12, borderWidth: 1 },
   viewSwitch: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 12, borderWidth: 1, padding: 3, maxWidth: '100%' },
   viewSwitchBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 7, borderRadius: 9 },

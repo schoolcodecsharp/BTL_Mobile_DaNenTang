@@ -23,6 +23,9 @@ export async function getTasks(userId) {
   return (tasks ?? []).map(task => ({ ...task, nhacTruoc: options[String(task.id)] }));
 }
 
+/** Read one non-trashed personal task without waiting for native reminder work. */
+export const getTask = (userId, taskId) => apiFetch(`/api/users/${userId}/tasks/${taskId}`);
+
 /**
  * Tạo công việc mới.
  * @param {number} userId
@@ -58,6 +61,16 @@ export async function updateTask(userId, taskId, payload) {
 export async function deleteTask(userId, taskId) {
   const result = await apiFetch(`/api/users/${userId}/tasks/${taskId}`, { method: 'DELETE' });
   void changeTaskReminder(userId, { id: taskId }, true).catch(reportReminderError);
+  return result;
+}
+
+/** Move only the confirmed completed tasks to recoverable trash. */
+export async function trashCompletedTasks(userId, taskIds) {
+  const result = await apiFetch(`/api/users/${userId}/tasks/completed/trash`, {
+    method: 'POST', body: { taskIds },
+  });
+  void Promise.all((result.taskIds ?? []).map(taskId =>
+    changeTaskReminder(userId, { id: taskId }, true))).catch(reportReminderError);
   return result;
 }
 

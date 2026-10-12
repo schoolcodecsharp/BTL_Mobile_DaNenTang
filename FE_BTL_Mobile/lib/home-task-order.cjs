@@ -12,9 +12,8 @@ function orderHomeTasks(tasks, now = Date.now()) {
   tomorrow.setHours(24, 0, 0, 0);
   const dayEnd = tomorrow.getTime();
   return tasks
-    .filter((task) => task.trangThai !== 'HOAN_THANH' &&
-      (!task.ngayBatDau || timestamp(task.ngayBatDau) <= now ||
-        timestamp(task.hanHoanThanh) <= now || task.trangThai === 'QUA_HAN'))
+    // A future start is planning information, not a reason to hide a task.
+    .filter((task) => task.trangThai !== 'HOAN_THANH')
     .map((task) => {
       const result = { ...task, trangThai: effectiveStatus(task, now) };
       const due = timestamp(task.hanHoanThanh);

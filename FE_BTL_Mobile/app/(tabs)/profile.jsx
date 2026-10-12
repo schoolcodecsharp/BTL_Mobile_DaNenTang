@@ -26,6 +26,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getTasks } from '@/lib/tasks-api';
 import { changeUserPassword, updateUserProfile } from '@/lib/users-api';
 import { apiUpload } from '@/lib/api';
+import { confirmAction } from '@/lib/confirm-action';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -90,17 +91,16 @@ export default function ProfileScreen() {
       router.replace('/(auth)/login');
       return;
     }
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất khỏi TaskMaster?', [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Đăng xuất',
-        style: 'destructive',
-        onPress: () => {
-          signOut();
-          router.replace('/(auth)/login');
-        },
+    confirmAction({
+      title: 'Đăng xuất',
+      message: 'Bạn có chắc muốn đăng xuất khỏi TaskMaster?',
+      confirmText: 'Đăng xuất',
+      destructive: true,
+      onConfirm: async () => {
+        await signOut();
+        router.replace('/(auth)/login');
       },
-    ]);
+    });
   };
 
   const handleMenuPress = (key) => {
