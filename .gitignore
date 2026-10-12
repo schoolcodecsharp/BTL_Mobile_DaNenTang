@@ -3,4 +3,15 @@ obj/
 bin/
 .env
 *.env
+.env.*
+!.env.example
+!.env.*.example
+*.apk
+*.aab
+*.jks
+*.keystore
 BE_BTL_Mobile/uploads/
+
+# Local runtime logs, device captures, QA artifacts and temporary test tooling.
+output/diagnostics/
+.impeccable/review/
