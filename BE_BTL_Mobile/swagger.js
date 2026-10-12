@@ -35,6 +35,7 @@ const options = {
             ngayHoanThanh: { type: 'string', format: 'date-time', nullable: true },
             ngayTao: { type: 'string', format: 'date-time' },
             ngayCapNhat: { type: 'string', format: 'date-time' },
+            ngayXoa: { type: 'string', format: 'date-time', nullable: true },
           },
         },
         Category: {
@@ -240,9 +241,70 @@ const options = {
         },
         delete: {
           tags: ['Tasks'],
-          summary: 'Xóa công việc',
+          summary: 'Chuyển công việc vào thùng rác',
+          description: 'Xóa mềm, không đổi trạng thái hoàn thành. Có thể khôi phục trong thùng rác trước khi dữ liệu bị dọn vĩnh viễn.',
           parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }, { name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
           responses: { 204: { description: 'Xóa thành công' }, 404: { description: 'Không tìm thấy' } },
+        },
+      },
+      '/api/users/{userId}/tasks/completed/trash': {
+        post: {
+          tags: ['Tasks'],
+          summary: 'Dọn các công việc đã hoàn thành vào thùng rác',
+          description: 'Chỉ chủ tài khoản được thực hiện. Chỉ chuyển các ID đã xác nhận còn ở trạng thái HOAN_THANH và chưa xóa. Bỏ qua ID không tồn tại, của người khác, đã đổi trạng thái hoặc đã ở thùng rác; gọi lại không xóa thêm. Không tạo công việc lặp tiếp theo và không xóa vĩnh viễn.',
+          security: [{ bearerAuth: [] }],
+          parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object', required: ['taskIds'],
+                  properties: { taskIds: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'integer', minimum: 1, maximum: Number.MAX_SAFE_INTEGER } } },
+                },
+                example: { taskIds: [12, 15, 18] },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Các công việc phù hợp đã được chuyển vào thùng rác; có thể trả movedCount bằng 0.',
+              content: { 'application/json': { schema: {
+                type: 'object', required: ['movedCount', 'taskIds'],
+                properties: {
+                  movedCount: { type: 'integer', minimum: 0 },
+                  taskIds: { type: 'array', items: { type: 'integer' } },
+                },
+              }, example: { movedCount: 2, taskIds: [12, 15] } } },
+            },
+            400: { description: 'ID người dùng hoặc danh sách taskIds không hợp lệ.' },
+            401: { description: 'Chưa đăng nhập, phiên hết hạn hoặc tài khoản không khả dụng.' },
+            403: { description: 'Không phải chủ tài khoản trong đường dẫn.' },
+            500: { description: 'Lỗi máy chủ; giao dịch dọn công việc không được lưu.' },
+          },
+        },
+      },
+      '/api/users/{userId}/tasks/trash': {
+        get: {
+          tags: ['Tasks'], summary: 'Lấy công việc trong thùng rác',
+          description: 'Trước khi trả danh sách, dọn vĩnh viễn các công việc đã ở thùng rác quá 30 ngày. Đây là dọn khi truy cập danh sách, không phải tác vụ chạy đúng giờ nền.',
+          parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: { 200: { description: 'Danh sách công việc đã xóa mềm.', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Task' } } } } } },
+        },
+      },
+      '/api/users/{userId}/tasks/{id}/restore': {
+        post: {
+          tags: ['Tasks'], summary: 'Khôi phục công việc từ thùng rác',
+          parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }, { name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: { 200: { description: 'Khôi phục thành công, giữ nguyên trạng thái công việc.', content: { 'application/json': { schema: { $ref: '#/components/schemas/Task' } } } }, 404: { description: 'Không tìm thấy công việc trong thùng rác.' } },
+        },
+      },
+      '/api/users/{userId}/tasks/{id}/permanent': {
+        delete: {
+          tags: ['Tasks'], summary: 'Xóa vĩnh viễn công việc trong thùng rác',
+          description: 'Chỉ áp dụng cho công việc đã được chuyển vào thùng rác. Không thể khôi phục sau thao tác này.',
+          parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'integer' } }, { name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
+          responses: { 204: { description: 'Đã xóa vĩnh viễn.' }, 404: { description: 'Không tìm thấy công việc trong thùng rác.' } },
         },
       },
       // CATEGORIES
