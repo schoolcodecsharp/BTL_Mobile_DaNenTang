@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { Op } = require('sequelize');
 const { sequelize, CongViec, DanhMuc } = require('../models');
 const { VALID_RECURRENCES, nextOccurrence } = require('../lib/recurrence');
+const { requireAuth } = require('../middleware/auth');
 
 const router = Router({ mergeParams: true });
 
@@ -66,6 +67,50 @@ router.get('/trash', async (req, res) => {
       order: [['ngay_xoa', 'DESC']],
     });
     return res.json(tasks.map(toResponse));
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+// POST /api/users/:userId/tasks/completed/trash
+// Only the completed IDs explicitly confirmed by the owner are moved to trash.
+router.post('/completed/trash', requireAuth, async (req, res) => {
+  const userId = Number(req.params.userId);
+  if (!/^[1-9]\d*$/.test(req.params.userId) || !Number.isSafeInteger(userId)) {
+    return res.status(400).json({ message: 'ID người dùng không hợp lệ.' });
+  }
+  if (req.auth.userId !== userId) {
+    return res.status(403).json({ message: 'Bạn chỉ có thể dọn công việc của mình.' });
+  }
+  const suppliedIds = req.body?.taskIds;
+  if (!Array.isArray(suppliedIds) || suppliedIds.length === 0 || suppliedIds.length > 500 ||
+    suppliedIds.some(id => !Number.isSafeInteger(id) || id <= 0)) {
+    return res.status(400).json({ message: 'taskIds phải là danh sách từ 1 đến 500 ID nguyên dương.' });
+  }
+  const confirmedIds = [...new Set(suppliedIds)];
+  try {
+    const taskIds = await sequelize.transaction(async transaction => {
+      const where = {
+        nguoi_dung_id: userId,
+        id: { [Op.in]: confirmedIds },
+        trang_thai: 'HOAN_THANH',
+        ngay_xoa: null,
+      };
+      const tasks = await CongViec.findAll({
+        attributes: ['id'], where, transaction, lock: transaction.LOCK.UPDATE,
+      });
+      const selectedIds = tasks.map(task => task.id);
+      if (selectedIds.length) {
+        const now = new Date();
+        await CongViec.update({ ngay_xoa: now, ngay_cap_nhat: now }, {
+          where: { ...where, id: { [Op.in]: selectedIds } }, transaction,
+        });
+      }
+      return selectedIds;
+    });
+    // Missing, already trashed, changed-status and other-owner IDs are ignored.
+    return res.json({ movedCount: taskIds.length, taskIds });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Internal server error.' });
