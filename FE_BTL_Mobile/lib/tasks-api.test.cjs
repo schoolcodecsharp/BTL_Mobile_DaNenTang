@@ -42,10 +42,17 @@ function harness(overrides = {}) {
   const source = fs.readFileSync(require.resolve('./tasks-api.js'), 'utf8')
     .replace(/^import .*;\r?\n/gm, '')
     .replace(/^export /gm, '')
-    + '\nmodule.exports = { getTasks, createTask, updateTask, deleteTask };';
+    + '\nmodule.exports = { getTasks, getTask, createTask, updateTask, deleteTask, trashCompletedTasks };';
   vm.runInNewContext(source, context);
   return { ...context.module.exports, calls, errors };
 }
+
+test('detail loading reads the exact task without listing all tasks or waiting for native reminders', async () => {
+  const task = { id: 23, tieuDe: 'Prepare demo', moTa: 'Full description' };
+  const h = harness({ apiFetch: async () => task });
+  assert.deepEqual(plain(await h.getTask(12, 23)), task);
+  assert.deepEqual(plain(h.calls), [{ name: 'apiFetch', args: ['/api/users/12/tasks/23'] }]);
+});
 
 test('task loading waits for API/options but not native sync, and preserves the fetch revision', async () => {
   const response = deferred();
@@ -193,4 +200,31 @@ test('unreadable reminder preferences still reject task loading before syncing',
   const h = harness({ apiFetch: async () => [{ id: 23 }], readTaskReminderOptions: async () => { throw failure; } });
   await assert.rejects(h.getTasks(12), error => error === failure);
   assert.deepEqual(h.calls.map(call => call.name), ['reminderRevision', 'apiFetch', 'readTaskReminderOptions']);
+});
+
+test('completed cleanup sends confirmed IDs and only cancels reminders for server-confirmed moves', async () => {
+  const response = { movedCount: 2, taskIds: [23, 24] };
+  const h = harness({ apiFetch: async () => response, changeTaskReminder: () => deferred().promise });
+  assert.deepEqual(plain(await resolvesWithoutNative(h.trashCompletedTasks(12, [23, 24, 25]))), response);
+  assert.deepEqual(plain(h.calls), [
+    { name: 'apiFetch', args: ['/api/users/12/tasks/completed/trash', { method: 'POST', body: { taskIds: [23, 24, 25] } }] },
+    { name: 'changeTaskReminder', args: [12, { id: 23 }, true] },
+    { name: 'changeTaskReminder', args: [12, { id: 24 }, true] },
+  ]);
+});
+
+test('a rejected completed cleanup preserves reminders and does not report success', async () => {
+  const failure = new Error('Cleanup rejected');
+  const h = harness({ apiFetch: async () => { throw failure; } });
+  await assert.rejects(h.trashCompletedTasks(12, [23]), error => error === failure);
+  assert.deepEqual(h.calls.map(call => call.name), ['apiFetch']);
+});
+
+test('completed cleanup stays successful if background reminder cancellation fails', async () => {
+  const failure = new Error('Native cancellation failed');
+  const response = { movedCount: 1, taskIds: [23] };
+  const h = harness({ apiFetch: async () => response, changeTaskReminder: async () => { throw failure; } });
+  assert.deepEqual(plain(await h.trashCompletedTasks(12, [23])), response);
+  await nextTurn();
+  assert.deepEqual(h.errors, [failure]);
 });
