@@ -1,13 +1,11 @@
 import { NotificationInbox } from '@/components/notification-inbox';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   AppState,
-  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -23,6 +21,9 @@ import { useAuthSession } from '@/components/auth-session';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getTasks, updateTask } from '@/lib/tasks-api';
 import { orderHomeTasks } from '@/lib/home-task-order.cjs';
+import { assignedGroupTasksForHome } from '@/lib/home-group-tasks.cjs';
+import { countTaskScopes } from '@/lib/task-cohorts.cjs';
+import { personalTaskStatusPayload, subscribeTaskChanges } from '@/lib/task-detail.cjs';
 import { getTeams, getGroupTasks, updateGroupTaskStatus } from '@/lib/teams-api';
 
 const FILTERS = ['Tất cả', 'Chưa làm', 'Đang làm', 'Quá hạn'];
@@ -52,6 +53,7 @@ function getTodayLabel() {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
   const isDark = useColorScheme() === 'dark';
   const { user } = useAuthSession();
   const [tasks, setTasks] = useState([]);
@@ -60,7 +62,6 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState('Tất cả');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
-  const [selectedTask, setSelectedTask] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
   const statusRequestPending = useRef(false);
   const [savingTaskKey, setSavingTaskKey] = useState(null);
@@ -93,8 +94,7 @@ export default function HomeScreen() {
         getTeams(user.id).then(async (teams) => {
           const groups = await Promise.allSettled((teams ?? []).map(async (team) => {
             const list = await getGroupTasks(team.id, user.id);
-            return (list ?? []).map((task) => ({ ...task, teamId: team.id, teamName: team.tenNhom,
-              canChangeStatus: team.truongNhomId === user.id || task.nguoiNhanId === user.id }));
+            return assignedGroupTasksForHome(list, team, user.id);
           }));
           return { tasks: groups.flatMap((result) => result.status === 'fulfilled' ? result.value : []),
             failed: groups.some((result) => result.status === 'rejected') };
@@ -116,36 +116,29 @@ export default function HomeScreen() {
     }
   }, [user]);
 
-  useFocusEffect(useCallback(() => { void fetchTasks(); }, [fetchTasks]));
+  useFocusEffect(useCallback(() => {
+    void fetchTasks();
+    return subscribeTaskChanges(() => { void fetchTasks(true); });
+  }, [fetchTasks]));
 
-  const changeStatus = async (newStatus, task = selectedTask) => {
+  const changeStatus = async (newStatus, task) => {
     if (!user?.id || !task || statusRequestPending.current) return;
     if (task.teamId && !task.canChangeStatus) return;
-    if (task.trangThai === newStatus) { setSelectedTask(null); return; }
+    if (task.trangThai === newStatus) return;
     statusRequestPending.current = true;
     setSavingTaskKey(`${task.teamId || 'personal'}:${task.id}`);
     setSavingStatus(true);
     try {
       if (task.teamId) {
         await updateGroupTaskStatus(task.teamId, task.id, { userId: user.id, trangThai: newStatus });
-      } else await updateTask(user.id, task.id, {
-        title: task.tieuDe,
-        description: task.moTa,
-        priority: task.mucDoUuTien,
-        status: newStatus,
-        categoryId: task.danhMucId,
-        startDate: task.ngayBatDau,
-        dueDate: task.hanHoanThanh,
-        recurrence: task.lapLai ?? 'KHONG',
-      });
+      } else await updateTask(user.id, task.id, personalTaskStatusPayload(task, newStatus));
       setTasks((prev) => prev.map((t) => t.id === task.id && t.teamId === task.teamId ? { ...t, trangThai: newStatus } : t));
-      setSelectedTask(null);
       void Haptics.selectionAsync().catch(() => {});
       if (!task.teamId && task.lapLai && task.lapLai !== 'KHONG' && newStatus === 'HOAN_THANH') {
         void fetchTasks(true);
       }
     } catch (err) {
-      Alert.alert('Chưa đổi được trạng thái', err.message || 'Vui lòng thử lại.');
+      setError(err.message || 'Chưa đổi được trạng thái. Vui lòng thử lại.');
     } finally {
       setSavingStatus(false);
       setSavingTaskKey(null);
@@ -159,10 +152,11 @@ export default function HomeScreen() {
 
   const pendingTasks = useMemo(() => orderHomeTasks(tasks, now), [tasks, now]);
 
-  const visibleTasks = useMemo(() => pendingTasks.filter((task) => {
-    const matchesFilter = filter === 'Tất cả' || STATUS_STYLES[task.trangThai]?.label === filter;
-    return matchesFilter && task.tieuDe.toLowerCase().includes(search.trim().toLowerCase());
-  }), [filter, search, pendingTasks]);
+  const searchedTasks = useMemo(() => pendingTasks.filter(task =>
+    task.tieuDe.toLowerCase().includes(search.trim().toLowerCase())), [pendingTasks, search]);
+  const visibleTasks = useMemo(() => searchedTasks.filter(task =>
+    filter === 'Tất cả' || STATUS_STYLES[task.trangThai]?.label === filter), [filter, searchedTasks]);
+  const scopeCounts = countTaskScopes(visibleTasks);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -220,9 +214,12 @@ export default function HomeScreen() {
 
         {/* Section header */}
         <View style={styles.sectionHeader}>
-          <View>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Công việc cần làm</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Công việc chưa xong</Text>
             <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>{visibleTasks.length} công việc • Theo hạn và mức ưu tiên</Text>
+            <Text style={[styles.sectionSubtitle, { color: theme.muted }]}>
+              Cá nhân: {scopeCounts.regular} thường, {scopeCounts.recurring} lặp lại • Nhóm: {scopeCounts.group}
+            </Text>
           </View>
         </View>
 
@@ -230,10 +227,14 @@ export default function HomeScreen() {
         <View style={[styles.filters, { flexWrap: 'wrap' }]}>
           {FILTERS.map((item) => {
             const active = filter === item;
+            const count = item === 'Tất cả' ? searchedTasks.length
+              : searchedTasks.filter(task => STATUS_STYLES[task.trangThai]?.label === item).length;
             return (
               <TouchableOpacity key={item} onPress={() => setFilter(item)}
+                accessibilityRole="button" accessibilityLabel={`${item} (${count})`}
+                aria-pressed={active} accessibilityState={{ selected: active }}
                 style={[styles.filterChip, { backgroundColor: active ? theme.primary : theme.surface, borderColor: active ? theme.primary : theme.border }]}>
-                <Text style={[styles.filterText, { color: active ? '#FFFFFF' : theme.muted }]}>{item}</Text>
+                <Text style={[styles.filterText, { color: active ? '#FFFFFF' : theme.muted }]}>{item} ({count})</Text>
               </TouchableOpacity>
             );
           })}
@@ -267,10 +268,11 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   activeOpacity={0.78} key={`${task.teamId ? `team-${task.teamId}` : 'personal'}-${task.id}`}
-                  onPress={() => task.teamId && !task.canChangeStatus
-                    ? Alert.alert('Công việc nhóm', 'Chỉ trưởng nhóm hoặc người được giao việc được đổi trạng thái.')
-                    : setSelectedTask(task)}
-                  accessibilityLabel={`${task.tieuDe}. ${status.label}. Đổi trạng thái`}
+                  onPress={() => router.push({ pathname: '/task-detail', params: {
+                    id: String(task.id), ...(task.teamId ? { teamId: String(task.teamId) } : {}),
+                  } })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Xem chi tiết ${task.tieuDe}`}
                   style={[styles.taskCard, { backgroundColor: isDark ? `${status.color}18` : `${status.color}0D`, borderColor: `${status.color}55` }]}>
                   <View style={[styles.categoryBar, { backgroundColor: status.color }]} />
                   <Pressable
@@ -347,25 +349,6 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
-      <Modal visible={!!selectedTask} transparent animationType="fade" onRequestClose={() => { if (!savingStatus) setSelectedTask(null); }}>
-        <View style={{ flex: 1, backgroundColor: '#00000080', justifyContent: 'center', padding: 24 }}>
-          <View style={{ backgroundColor: theme.surface, borderRadius: 20, padding: 20 }}>
-            <Text style={{ color: theme.text, fontSize: 20, fontWeight: '700' }}>Đổi trạng thái</Text>
-            <Text numberOfLines={2} style={{ color: theme.muted, marginVertical: 12 }}>{selectedTask?.tieuDe}</Text>
-            {Object.entries(STATUS_STYLES).map(([value, option]) => (
-              <TouchableOpacity key={value} disabled={savingStatus} onPress={() => changeStatus(value)}
-                accessibilityRole="radio" accessibilityState={{ checked: selectedTask?.trangThai === value, disabled: savingStatus }}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: option.color, backgroundColor: `${option.color}18`, opacity: savingStatus ? 0.5 : 1 }}>
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: option.color }} />
-                <Text style={{ color: theme.text, flex: 1, fontWeight: '600' }}>{option.label}</Text>
-                {selectedTask?.trangThai === value && <Ionicons name="checkmark" size={20} color={option.color} />}
-              </TouchableOpacity>
-            ))}
-            {savingStatus ? <ActivityIndicator accessibilityLabel="Đang lưu trạng thái" color={theme.primary} /> :
-              <TouchableOpacity onPress={() => setSelectedTask(null)} style={{ padding: 12, alignItems: 'center' }}><Text style={{ color: theme.muted }}>Hủy</Text></TouchableOpacity>}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -412,9 +395,9 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, paddingHorizontal: 10, paddingVertical: 0 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   sectionTitle: { fontSize: 19, fontWeight: '800', letterSpacing: -0.25 },
-  sectionSubtitle: { fontSize: 12, marginTop: 3 },
+  sectionSubtitle: { fontSize: 12, lineHeight: 18, marginTop: 3 },
   filters: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  filterChip: { borderRadius: 20, borderWidth: 1, paddingHorizontal: 15, paddingVertical: 8 },
+  filterChip: { minHeight: 48, justifyContent: 'center', borderRadius: 20, borderWidth: 1, paddingHorizontal: 15, paddingVertical: 8 },
   filterText: { fontSize: 12.5, fontWeight: '700' },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 14 },
   errorText: { color: '#E11D48', fontSize: 13, flex: 1 },
