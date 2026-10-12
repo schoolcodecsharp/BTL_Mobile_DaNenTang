@@ -118,9 +118,11 @@ export default function AdminAccounts() {
   }, [token, search, status, role, page, refresh]);
 
   async function logout() {
-    try { await apiFetch('/api/auth/logout', { method: 'POST' }); }
-    catch { /* Local logout still clears the saved session if the server is unreachable. */ }
-    finally { setSummary(null); setData({ rows: [], total: 0 }); setAction(null); signOut(); }
+    // Capture this session's token before clearing it, but never make the UI
+    // wait for the server. An offline backend must not prevent local logout.
+    void apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    setSummary(null); setData({ rows: [], total: 0 }); setAction(null);
+    await signOut();
   }
   async function save(body) {
     if (savingRef.current) return;
