@@ -77,9 +77,13 @@ export function AuthSessionProvider({ children }) {
       });
     },
     signOut: () => {
-      void stopReminders().catch(reportReminderError);
       setApiToken(null);
       setSession(null);
+      // Queue removal now, so callers can wait for it before navigating/reloading.
+      // It must stay ordered after any earlier profile/session writes.
+      const removal = persistSession(null);
+      void stopReminders().catch(reportReminderError);
+      return removal;
     },
   }), [session]);
 
