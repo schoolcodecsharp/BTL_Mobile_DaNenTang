@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthSession } from '@/components/auth-session';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useLiveNow, useLiveRefresh } from '@/hooks/use-live-refresh';
+import { effectiveStatus } from '@/lib/task-status.cjs';
 import { getTask, updateTask } from '@/lib/tasks-api';
 import { getGroupTasks, getTeamDetail, updateGroupTaskStatus } from '@/lib/teams-api';
 import { STATUS_ACTIONS, formatTaskDeadline, notifyTaskChanged, parseTaskId,
@@ -28,6 +30,7 @@ export default function TaskDetailScreen() {
   const mounted = useRef(false);
   const loadRevision = useRef(0);
   const writePending = useRef(false);
+  const now = useLiveNow();
 
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC', surface: isDark ? '#151E31' : '#FFFFFF',
@@ -37,10 +40,11 @@ export default function TaskDetailScreen() {
     skeleton: isDark ? '#25324A' : '#E8ECF3',
   };
 
-  const loadDetail = useCallback(async () => {
+  const loadDetail = useCallback(async (silent = false) => {
+    if (silent && writePending.current) return;
     const revision = ++loadRevision.current;
     const isCurrent = () => mounted.current && revision === loadRevision.current;
-    setLoading(true); setError(''); setTask(null);
+    if (!silent) { setLoading(true); setError(''); setTask(null); }
     try {
       if (!userId) throw new Error('Bạn cần đăng nhập để xem công việc.');
       if (invalidLink) throw new Error('Liên kết công việc không hợp lệ. Quay lại Trang chủ để chọn lại.');
@@ -55,21 +59,21 @@ export default function TaskDetailScreen() {
         detail = await getTask(userId, taskId);
         if (!detail) throw new Error('Không tìm thấy công việc. Công việc có thể đã được chuyển vào Thùng rác.');
       }
-      if (isCurrent()) setTask(detail);
+      if (isCurrent()) { setTask(detail); setError(''); }
     } catch (err) {
       if (isCurrent()) setError(err.status === 404
         ? 'Không tìm thấy công việc. Công việc có thể đã được chuyển vào Thùng rác.'
         : err.message || 'Chưa tải được chi tiết. Vui lòng thử lại.');
     } finally {
-      if (isCurrent()) setLoading(false);
+      if (isCurrent() && !silent) setLoading(false);
     }
   }, [invalidLink, taskId, teamId, userId]);
 
   useEffect(() => {
     mounted.current = true;
-    const timer = setTimeout(() => { void loadDetail(); }, 0);
-    return () => { clearTimeout(timer); mounted.current = false; loadRevision.current += 1; };
+    return () => { mounted.current = false; loadRevision.current += 1; };
   }, [loadDetail]);
+  useLiveRefresh(loadDetail, { identity: `${userId}:${teamId}:${taskId}:${invalidLink}`, interval: teamId && !invalidLink ? 15000 : 0 });
 
   async function changeStatus(status) {
     if (!user?.id || !task || writePending.current ||
@@ -129,6 +133,7 @@ export default function TaskDetailScreen() {
           <View style={styles.field}>
             <Text style={[styles.label, { color: theme.muted }]}>Hạn hoàn thành</Text>
             <Text selectable style={[styles.deadline, { color: theme.text }]}>{formatTaskDeadline(task.hanHoanThanh)}</Text>
+            {effectiveStatus(task, now) === 'QUA_HAN' && <Text style={{ color: theme.error, fontWeight: '700' }}>Quá hạn</Text>}
           </View>
           <View style={[styles.actions, { borderTopColor: theme.border }]}>
             {STATUS_ACTIONS.map(action => {

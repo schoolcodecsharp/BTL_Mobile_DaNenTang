@@ -1,5 +1,4 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -7,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -22,7 +20,10 @@ import { KeyboardModalOverlay } from '@/components/keyboard-modal-overlay';
 import { useAuthSession } from '@/components/auth-session';
 import { FilePicker } from '@/components/file-picker';
 import { TaskExtras } from '@/components/task-extras';
+import { TaskDatePicker } from '@/components/task-date-picker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useLiveNow, useLiveRefresh } from '@/hooks/use-live-refresh';
+import { effectiveStatus } from '@/lib/task-status.cjs';
 import {
   createGroupTask,
   createTeam,
@@ -83,18 +84,18 @@ export default function TeamsScreen() {
     separator: isDark ? '#25324A' : '#EFF1F5',
   };
 
-  const fetchTeams = useCallback(async (isRefresh = false) => {
+  const fetchTeams = useCallback(async (isRefresh = false, silent = false, isCurrent = () => true) => {
     if (!user?.id) return;
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    setError('');
+    if (!silent) { if (isRefresh) setRefreshing(true); else setLoading(true); }
     try {
       const data = await getTeams(user.id);
+      if (!isCurrent()) return;
       setTeams(data ?? []);
+      setError('');
     } catch (err) {
-      setError(err.message);
+      if (isCurrent()) setError(err.message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isCurrent() && !silent) { setLoading(false); setRefreshing(false); }
     }
   }, [user]);
 
@@ -111,7 +112,17 @@ export default function TeamsScreen() {
     }
   }, [user]);
 
-  useFocusEffect(useCallback(() => { void fetchTeams(); }, [fetchTeams]));
+  useLiveRefresh(async (silent, isCurrent) => {
+    if (!selectedTeam) { await fetchTeams(false, silent, isCurrent); return; }
+    if (!user?.id) return;
+    const id = selectedTeam.id;
+    const [detail, tasksList, activity] = await Promise.all([
+      getTeamDetail(id), getGroupTasks(id, user.id), getTeamActivity(id),
+    ]);
+    if (!isCurrent()) return;
+    setSelectedTeam(current => current?.id === id
+      ? { ...current, detail, tasks: tasksList ?? [], activity: activity ?? [] } : current);
+  }, { enabled: !!user?.id, identity: `${user?.id}:${selectedTeam?.id || 'list'}`, interval: selectedTeam ? 15000 : 0 });
   useEffect(() => {
     if (!params.teamId || !user?.id) return;
     const timer = setTimeout(() => {
@@ -221,6 +232,7 @@ export default function TeamsScreen() {
 // ─────────────────────────────────────────────────────────────
 function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) {
   const { detail, tasks, activity, focusTaskId } = teamData;
+  const now = useLiveNow();
   const isLeader = detail?.truongNhomId === user?.id;
 
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -490,7 +502,8 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
               </View>
             ) : (
               filteredTasks.map((task) => {
-                const color = STATUS_COLORS[task.trangThai] ?? '#6366F1';
+                const status = effectiveStatus(task, now);
+                const color = STATUS_COLORS[status] ?? '#6366F1';
                 const isAssignedToMe = task.nguoiNhanId === user?.id;
                 return (
                   <TouchableOpacity
@@ -504,7 +517,7 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
                         <Text numberOfLines={1} style={[styles.taskTitle, { color: theme.text }]}>{task.tieuDe}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <View style={[styles.statusBadge, { backgroundColor: `${color}18` }]}>
-                            <Text style={[styles.statusText, { color }]}>{STATUS_LABELS[task.trangThai] ?? task.trangThai}</Text>
+                            <Text style={[styles.statusText, { color }]}>{STATUS_LABELS[status] ?? status}</Text>
                           </View>
                           {isLeader && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -653,7 +666,7 @@ function TeamDetailScreen({ teamData, user, theme, isDark, onBack, onRefresh }) 
 
       <TaskDetailModal
         visible={!!viewingTask}
-        task={viewingTask}
+        task={(tasks ?? []).find(task => task.id === viewingTask?.id) ?? null}
         theme={theme}
         isDark={isDark}
         isLeader={isLeader}
@@ -1025,15 +1038,10 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, edit
               )}
             </TouchableOpacity>
             {showDatePicker && (
-              <DateTimePicker
-                value={form.dueDay ?? new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                onDismiss={() => setShowDatePicker(false)}
-                  onValueChange={(_, date) => {
-                  setShowDatePicker(false);
-                  if (date) setForm((f) => ({ ...f, dueDay: date }));
-                }}
+              <TaskDatePicker
+                value={form.dueDay}
+                onClose={() => setShowDatePicker(false)}
+                onPick={date => setForm(f => ({ ...f, dueDay: date }))}
               />
             )}
             <View style={styles.timeRow}>
@@ -1125,8 +1133,10 @@ function AssignTaskModal({ visible, theme, isDark, teamId, userId, members, edit
 // TASK DETAIL MODAL
 // ─────────────────────────────────────────────────────────────
 function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClose, onEdit, onDelete, onUpdateStatus }) {
+  const now = useLiveNow();
   if (!task) return null;
-  const color = STATUS_COLORS[task.trangThai] ?? '#6366F1';
+  const status = effectiveStatus(task, now);
+  const color = STATUS_COLORS[status] ?? '#6366F1';
   const isAssignedToMe = task.nguoiNhanId === userId;
   const canUpdateStatus = isAssignedToMe || isLeader;
 
@@ -1152,7 +1162,7 @@ function TaskDetailModal({ visible, task, theme, isDark, isLeader, userId, onClo
             {/* Badges */}
             <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10, flexWrap: 'wrap' }}>
               <View style={[styles.statusBadge, { backgroundColor: `${color}18`, paddingHorizontal: 10, paddingVertical: 5 }]}>
-                <Text style={[styles.statusText, { color, fontSize: 12 }]}>{STATUS_LABELS[task.trangThai] ?? task.trangThai}</Text>
+                <Text style={[styles.statusText, { color, fontSize: 12 }]}>{STATUS_LABELS[status] ?? status}</Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: `${priorityInfo.color}18`, paddingHorizontal: 10, paddingVertical: 5 }]}>
                 <Text style={[styles.statusText, { color: priorityInfo.color, fontSize: 12 }]}>{priorityInfo.label}</Text>

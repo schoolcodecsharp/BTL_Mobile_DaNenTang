@@ -1,4 +1,4 @@
-import { useFocusEffect , useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useState } from 'react';
@@ -24,9 +24,10 @@ import { useTaskReminders } from '@/components/task-reminder-provider';
 import { sendTestReminder } from '@/lib/task-reminders';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getTasks } from '@/lib/tasks-api';
-import { changeUserPassword, updateUserProfile } from '@/lib/users-api';
+import { changeUserPassword, getUserProfile, updateUserProfile } from '@/lib/users-api';
 import { apiUpload } from '@/lib/api';
 import { confirmAction } from '@/lib/confirm-action';
+import { useLiveRefresh } from '@/hooks/use-live-refresh';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -64,10 +65,15 @@ export default function ProfileScreen() {
     .join('')
     .toUpperCase() || 'K';
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (_silent = false, isCurrent = () => true) => {
     if (!user?.id) return;
     try {
-      const data = await getTasks(user.id);
+      const [data, profile] = await Promise.all([getTasks(user.id), getUserProfile(user.id)]);
+      if (!isCurrent()) return;
+      if (!showEditProfile && profile && (profile.fullName !== user.fullName ||
+        profile.email !== user.email || (profile.avatarUrl ?? null) !== (user.avatar ?? null))) {
+        updateUser({ fullName: profile.fullName, email: profile.email, avatar: profile.avatarUrl });
+      }
       const list = data ?? [];
       const total = list.length;
       const completed = list.filter((t) => t.trangThai === 'HOAN_THANH').length;
@@ -76,9 +82,9 @@ export default function ProfileScreen() {
     } catch {
       // ignore
     }
-  }, [user]);
+  }, [showEditProfile, updateUser, user]);
 
-  useFocusEffect(useCallback(() => { void fetchStats(); }, [fetchStats]));
+  useLiveRefresh(fetchStats, { enabled: !!user?.id, identity: user?.id, listenToTaskChanges: true });
 
   const onRefresh = async () => {
     setRefreshing(true);

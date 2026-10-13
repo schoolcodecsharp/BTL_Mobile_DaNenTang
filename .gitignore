@@ -11,6 +11,7 @@ bin/
 *.jks
 *.keystore
 BE_BTL_Mobile/uploads/
+BE_BTL_Mobile/.local-backups/
 
 # Local runtime logs, device captures, QA artifacts and temporary test tooling.
 output/diagnostics/

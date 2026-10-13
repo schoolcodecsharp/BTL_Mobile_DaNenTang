@@ -1,5 +1,4 @@
-import { useFocusEffect , useLocalSearchParams, useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -7,7 +6,6 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -22,12 +20,15 @@ import { KeyboardModalOverlay } from '@/components/keyboard-modal-overlay';
 import { useAuthSession } from '@/components/auth-session';
 import { FilePicker } from '@/components/file-picker';
 import { KanbanBoard } from '@/components/kanban-board';
+import { TaskDatePicker } from '@/components/task-date-picker';
 import { TaskTrash } from '@/components/task-trash';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DEFAULT_OFFSETS, REMINDER_OPTIONS } from '@/lib/reminder-plan.cjs';
 import { createTask, deleteTask, getTasks, trashCompletedTasks, updateTask } from '@/lib/tasks-api';
 import { confirmAction } from '@/lib/confirm-action';
 import { isRecurringTask } from '@/lib/task-cohorts.cjs';
+import { effectiveStatus } from '@/lib/task-status.cjs';
+import { useLiveNow, useLiveRefresh } from '@/hooks/use-live-refresh';
 
 const PRIORITY_OPTIONS = [
   { value: 'CAO', label: 'Cao', color: '#EF4444' },
@@ -101,6 +102,7 @@ export default function TasksScreen() {
   const [cleaningCompleted, setCleaningCompleted] = useState(false);
   const [notice, setNotice] = useState('');
   const deletingRef = useRef(false);
+  const now = useLiveNow();
 
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC',
@@ -115,24 +117,25 @@ export default function TasksScreen() {
     notice: isDark ? '#A5B4FC' : '#5B5CE2',
   };
 
-  const fetchTasks = useCallback(async (isRefresh = false) => {
+  const fetchTasks = useCallback(async (isRefresh = false, silent = false, isCurrent = () => true) => {
     if (!user?.id) return;
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    setError('');
+    if (!silent) { if (isRefresh) setRefreshing(true); else setLoading(true); }
     try {
       const data = await getTasks(user.id);
+      if (!isCurrent()) return;
       setTasks(data ?? []);
+      setError('');
     } catch (err) {
-      setError(err.message);
+      if (isCurrent()) setError(err.message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isCurrent() && !silent) { setLoading(false); setRefreshing(false); }
     }
   }, [user]);
 
-  useFocusEffect(useCallback(() => { void fetchTasks(); }, [fetchTasks]));
+  useLiveRefresh((silent, isCurrent) => fetchTasks(false, silent, isCurrent), { enabled: !!user?.id, identity: user?.id, listenToTaskChanges: true });
 
   function openCreate() {
+    setShowDatePicker(false);
     setEditingTask(null);
     setForm({ ...EMPTY_FORM, recurrence: taskList === 'recurring' ? 'HANG_NGAY' : 'KHONG' });
     setFormError('');
@@ -140,6 +143,7 @@ export default function TasksScreen() {
   }
 
   const openEdit = useCallback((task) => {
+    setShowDatePicker(false);
     setTaskList(task.lapLai && task.lapLai !== 'KHONG' ? 'recurring' : 'regular');
     setEditingTask(task);
     setForm({
@@ -177,6 +181,7 @@ export default function TasksScreen() {
   }, [taskId, tasks, loading, router, openEdit]);
 
   function closeModal() {
+    setShowDatePicker(false);
     setShowModal(false);
     setEditingTask(null);
     setForm(EMPTY_FORM);
@@ -360,7 +365,7 @@ export default function TasksScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.taskToolbar}>
+      {viewMode === 'list' && <View style={styles.taskToolbar}>
         {[
           ['all', 'Tất cả', selectedTasks.length],
           ['open', 'Chưa xong', selectedTasks.length - completedTasks.length],
@@ -371,8 +376,8 @@ export default function TasksScreen() {
           style={[styles.statusFilter, { backgroundColor: statusFilter === value ? theme.primary : theme.surface }]}>
           <Text style={{ color: statusFilter === value ? '#FFFFFF' : theme.text, fontWeight: '700', fontSize: 12 }}>{label} ({count})</Text>
         </TouchableOpacity>)}
-      </View>
-      {statusFilter === 'completed' && completedTasks.length > 0 && <View style={styles.taskToolbar}>
+      </View>}
+      {viewMode === 'list' && statusFilter === 'completed' && completedTasks.length > 0 && <View style={styles.taskToolbar}>
         <TouchableOpacity accessibilityRole="button" accessibilityLabel="Dọn công việc đã hoàn thành"
           disabled={cleaningCompleted || deletingId !== null || movingId !== null || loading}
           onPress={handleCleanupCompleted}
@@ -401,7 +406,7 @@ export default function TasksScreen() {
       )}
 
       {/* Task List */}
-      {!loading && viewMode === 'kanban' && <KanbanBoard tasks={listedTasks} theme={theme} onOpen={openEdit} onMove={handleMoveTask} movingId={movingId} refreshing={refreshing} onRefresh={() => fetchTasks(true)} />}
+      {!loading && viewMode === 'kanban' && <KanbanBoard tasks={selectedTasks} now={now} theme={theme} onOpen={openEdit} onMove={handleMoveTask} movingId={movingId} refreshing={refreshing} onRefresh={() => fetchTasks(true)} />}
       {!loading && viewMode === 'list' && (
         <ScrollView
           contentContainerStyle={styles.listContent}
@@ -415,7 +420,8 @@ export default function TasksScreen() {
             </View>
           ) : (
             listedTasks.map((task) => {
-              const color = STATUS_COLORS[task.trangThai] ?? '#6366F1';
+              const status = effectiveStatus(task, now);
+              const color = STATUS_COLORS[status] ?? '#6366F1';
               return (
                 <TouchableOpacity
                   key={task.id}
@@ -427,7 +433,7 @@ export default function TasksScreen() {
                     <View style={styles.taskTop}>
                       <Text numberOfLines={1} style={[styles.taskTitle, { color: theme.text }]}>{task.tieuDe}</Text>
                       <View style={[styles.statusBadge, { backgroundColor: `${color}18` }]}>
-                        <Text style={[styles.statusText, { color }]}>{STATUS_LABELS[task.trangThai] ?? task.trangThai}</Text>
+                        <Text style={[styles.statusText, { color }]}>{STATUS_LABELS[status] ?? status}</Text>
                       </View>
                     </View>
                     {!!task.moTa && (
@@ -564,15 +570,10 @@ export default function TasksScreen() {
                 )}
               </TouchableOpacity>
               {showDatePicker && (
-                <DateTimePicker
-                  value={form.dueDay ?? new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                  onDismiss={() => setShowDatePicker(false)}
-                  onValueChange={(_, date) => {
-                    setShowDatePicker(false);
-                    if (date) setForm((f) => ({ ...f, dueDay: date }));
-                  }}
+                <TaskDatePicker
+                  value={form.dueDay}
+                  onClose={() => setShowDatePicker(false)}
+                  onPick={date => setForm(f => ({ ...f, dueDay: date }))}
                 />
               )}
               {/* Giờ và Phút */}

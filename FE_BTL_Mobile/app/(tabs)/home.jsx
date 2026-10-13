@@ -1,11 +1,10 @@
 import { NotificationInbox } from '@/components/notification-inbox';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  AppState,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -23,7 +22,8 @@ import { getTasks, updateTask } from '@/lib/tasks-api';
 import { orderHomeTasks } from '@/lib/home-task-order.cjs';
 import { assignedGroupTasksForHome } from '@/lib/home-group-tasks.cjs';
 import { countTaskScopes } from '@/lib/task-cohorts.cjs';
-import { personalTaskStatusPayload, subscribeTaskChanges } from '@/lib/task-detail.cjs';
+import { personalTaskStatusPayload } from '@/lib/task-detail.cjs';
+import { useLiveNow, useLiveRefresh } from '@/hooks/use-live-refresh';
 import { getTeams, getGroupTasks, updateGroupTaskStatus } from '@/lib/teams-api';
 
 const FILTERS = ['Tất cả', 'Chưa làm', 'Đang làm', 'Quá hạn'];
@@ -65,15 +65,7 @@ export default function HomeScreen() {
   const [savingStatus, setSavingStatus] = useState(false);
   const statusRequestPending = useRef(false);
   const [savingTaskKey, setSavingTaskKey] = useState(null);
-  const [now, setNow] = useState(Date.now);
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') setNow(Date.now());
-    });
-    return () => { clearInterval(timer); subscription.remove(); };
-  }, []);
+  const now = useLiveNow();
 
   const theme = {
     background: isDark ? '#0B1120' : '#F7F8FC',
@@ -84,10 +76,9 @@ export default function HomeScreen() {
     primary: '#5B5CE2',
   };
 
-  const fetchTasks = useCallback(async (isRefresh = false) => {
+  const fetchTasks = useCallback(async (isRefresh = false, silent = false, isCurrent = () => true) => {
     if (!user?.id) return;
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    setError('');
+    if (!silent) { if (isRefresh) setRefreshing(true); else setLoading(true); }
     try {
       const results = await Promise.allSettled([
         getTasks(user.id),
@@ -101,25 +92,22 @@ export default function HomeScreen() {
         }),
       ]);
       const [personal, group] = results;
+      if (!isCurrent()) return;
       setTasks([
         ...(personal.status === 'fulfilled' ? personal.value ?? [] : []),
         ...(group.status === 'fulfilled' ? group.value.tasks : []),
       ]);
       if (personal.status === 'rejected' || group.status === 'rejected' || group.value.failed) {
         setError('Chưa tải được một phần công việc. Kéo xuống để thử lại.');
-      }
+      } else setError('');
     } catch (err) {
-      setError(err.message);
+      if (isCurrent()) setError(err.message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isCurrent() && !silent) { setLoading(false); setRefreshing(false); }
     }
   }, [user]);
 
-  useFocusEffect(useCallback(() => {
-    void fetchTasks();
-    return subscribeTaskChanges(() => { void fetchTasks(true); });
-  }, [fetchTasks]));
+  useLiveRefresh((silent, isCurrent) => fetchTasks(false, silent, isCurrent), { enabled: !!user?.id, identity: user?.id, listenToTaskChanges: true });
 
   const changeStatus = async (newStatus, task) => {
     if (!user?.id || !task || statusRequestPending.current) return;

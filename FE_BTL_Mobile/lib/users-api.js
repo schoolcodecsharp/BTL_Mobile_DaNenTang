@@ -1,5 +1,7 @@
 import { apiFetch } from './api';
 
+export const getUserProfile = userId => apiFetch(`/api/users/${userId}`);
+
 /**
  * Cập nhật thông tin người dùng.
  * @param {number} userId

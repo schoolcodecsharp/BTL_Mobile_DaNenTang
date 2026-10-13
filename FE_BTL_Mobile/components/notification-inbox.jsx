@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
+import { useLiveRefresh } from '@/hooks/use-live-refresh';
 import { useAuthSession } from './auth-session';
 import { markHistoryRead, readHistory, subscribeHistory } from '@/lib/notification-history';
 import { getNotifications, markNotificationRead } from '@/lib/notifications-api';
@@ -36,12 +37,12 @@ export function NotificationInbox({ theme }) {
     title: item.tieuDe, body: item.noiDung || '', date: new Date(item.ngayTao).getTime(), read: item.daDoc,
     taskId: item.congViecId, teamId: item.nhomId, groupTaskId: item.congViecNhomId, type: item.loai })), ...localItems]
     .sort((a, b) => b.date - a.date);
-  const refreshServer = useCallback(async () => {
+  const refreshServer = useCallback(async (silent = false, isCurrent = () => true) => {
     if (!accountId) return;
     const userId = accountId;
     const request = ++requestSequence.current;
-    const current = () => mounted.current && activeUser.current === userId && requestSequence.current === request;
-    setServerStatus({ userId, loading: true, error: '' });
+    const current = () => isCurrent() && mounted.current && activeUser.current === userId && requestSequence.current === request;
+    if (!silent) setServerStatus({ userId, loading: true, error: '' });
     try {
       const list = await getNotifications(userId);
       if (!current()) return;
@@ -58,11 +59,7 @@ export function NotificationInbox({ theme }) {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
-  useFocusEffect(useCallback(() => {
-    void refreshServer();
-    const timer = setInterval(() => void refreshServer(), 30000);
-    return () => clearInterval(timer);
-  }, [refreshServer]));
+  useLiveRefresh(refreshServer, { enabled: !!accountId, identity: accountId, interval: visible ? 30000 : 60000 });
   useEffect(() => {
     if (!user?.id) return;
     let active = true;
@@ -75,7 +72,7 @@ export function NotificationInbox({ theme }) {
   }, [user?.id]);
   const unread = items.filter((item) => !item.read).length;
   return <>
-    <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Thông báo, ${unread} chưa đọc`} onPress={() => { setVisible(true); void refreshServer(); }} style={{ minWidth: 48, minHeight: 48, padding: 12, borderRadius: 16, backgroundColor: theme.surface }}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Thông báo, ${unread} chưa đọc`} onPress={() => setVisible(true)} style={{ minWidth: 48, minHeight: 48, padding: 12, borderRadius: 16, backgroundColor: theme.surface }}>
       <Ionicons name="notifications-outline" size={23} color={theme.text} />
       {unread > 0 && <Text style={{ position: 'absolute', right: 0, top: 0, backgroundColor: '#DC2626', color: '#FFFFFF', borderRadius: 10, paddingHorizontal: 5, fontSize: 11 }}>{unread > 99 ? '99+' : unread}</Text>}
     </TouchableOpacity>

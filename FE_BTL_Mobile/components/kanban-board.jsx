@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { effectiveStatus } from '@/lib/task-status.cjs';
 
 const COLUMNS = [
   { value: 'CHUA_LAM', label: 'Chưa làm', color: '#6366F1' },
@@ -8,7 +9,8 @@ const COLUMNS = [
   { value: 'HOAN_THANH', label: 'Hoàn thành', color: '#10B981' },
 ];
 
-function DragCard({ task, columnIndex, theme, onOpen, onMove, moving }) {
+function DragCard({ task, columnIndex, theme, onOpen, onMove, moving, now }) {
+  const overdue = effectiveStatus(task, now) === 'QUA_HAN';
   const startX = useRef(0);
   const [dragX, setDragX] = useState(0);
   function release() {
@@ -27,6 +29,7 @@ function DragCard({ task, columnIndex, theme, onOpen, onMove, moving }) {
     style={{ transform: [{ translateX: dragX }], opacity: moving ? 0.55 : 1 }}>
     <View accessibilityHint="Kéo ngang để đổi trạng thái" style={{ backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1, borderRadius: 14, padding: 13, gap: 8 }}>
       <Text style={{ color: theme.text, fontWeight: '700', fontSize: 14 }}>{task.tieuDe}</Text>
+      {overdue && <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 12 }}>Quá hạn</Text>}
       {!!task.moTa && <Text numberOfLines={2} style={{ color: theme.muted, fontSize: 12 }}>{task.moTa}</Text>}
       {task.hanHoanThanh && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
         <Ionicons name="calendar-outline" size={12} color={theme.muted} />
@@ -44,7 +47,7 @@ function DragCard({ task, columnIndex, theme, onOpen, onMove, moving }) {
   </View>;
 }
 
-export function KanbanBoard({ tasks, theme, onOpen, onMove, movingId, refreshing, onRefresh }) {
+export function KanbanBoard({ tasks, now, theme, onOpen, onMove, movingId, refreshing, onRefresh }) {
   return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 120, gap: 12 }}>
     {COLUMNS.map((column, columnIndex) => {
       const items = tasks.filter(task => task.trangThai === column.value || (column.value === 'CHUA_LAM' && task.trangThai === 'QUA_HAN'));
@@ -53,9 +56,9 @@ export function KanbanBoard({ tasks, theme, onOpen, onMove, movingId, refreshing
           <Text style={{ color: column.color, fontWeight: '800', fontSize: 15 }}>{column.label}</Text>
           <View style={{ backgroundColor: `${column.color}20`, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 }}><Text style={{ color: column.color, fontWeight: '800' }}>{items.length}</Text></View>
         </View>
-        <ScrollView nestedScrollEnabled contentContainerStyle={{ gap: 10, paddingBottom: 8 }} refreshing={refreshing} onRefresh={onRefresh}>
+        <ScrollView nestedScrollEnabled contentContainerStyle={{ gap: 10, paddingBottom: 8 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}>
           {items.length === 0 && <Text style={{ color: theme.muted, textAlign: 'center', paddingVertical: 24 }}>Chưa có công việc</Text>}
-          {items.map(task => <DragCard key={task.id} task={task} columnIndex={columnIndex} theme={theme} onOpen={onOpen} onMove={onMove} moving={movingId === task.id} />)}
+          {items.map(task => <DragCard key={task.id} task={task} now={now} columnIndex={columnIndex} theme={theme} onOpen={onOpen} onMove={onMove} moving={movingId === task.id} />)}
         </ScrollView>
       </View>;
     })}

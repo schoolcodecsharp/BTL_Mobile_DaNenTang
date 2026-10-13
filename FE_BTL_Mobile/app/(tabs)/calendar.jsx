@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,8 @@ import { useAuthSession } from '@/components/auth-session';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getTasks } from '@/lib/tasks-api';
 import { dayKey, monthCells, tasksForDay } from '@/lib/calendar.cjs';
+import { useLiveNow, useLiveRefresh } from '@/hooks/use-live-refresh';
+import { effectiveStatus } from '@/lib/task-status.cjs';
 
 const labels = { CHUA_LAM: 'Chưa làm', DANG_LAM: 'Đang làm', HOAN_THANH: 'Hoàn thành', QUA_HAN: 'Quá hạn' };
 export default function CalendarScreen() {
@@ -19,23 +21,15 @@ export default function CalendarScreen() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  useFocusEffect(useCallback(() => {
-    let active = true;
-    if (user?.id) {
-      setLoading(true); setError('');
-      getTasks(user.id).then(data => { if (active) setTasks(data ?? []); })
-        .catch(err => { if (active) setError(err.message); })
-        .finally(() => { if (active) setLoading(false); });
-    }
-    return () => { active = false; };
-  }, [user]));
-  async function reload() {
+  const now = useLiveNow();
+  const reload = useCallback(async (silent = false, isCurrent = () => true) => {
     if (!user?.id) return;
-    setLoading(true); setError('');
-    try { setTasks(await getTasks(user.id) ?? []); }
-    catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  }
+    if (!silent) setLoading(true);
+    try { const data = await getTasks(user.id); if (isCurrent()) { setTasks(data ?? []); setError(''); } }
+    catch (err) { if (isCurrent()) setError(err.message); }
+    finally { if (isCurrent() && !silent) setLoading(false); }
+  }, [user]);
+  useLiveRefresh(reload, { enabled: !!user?.id, identity: user?.id, listenToTaskChanges: true });
   function move(delta) {
     const next = new Date(month.getFullYear(), month.getMonth() + delta, 1);
     setMonth(next); setSelected(dayKey(next));
@@ -48,7 +42,7 @@ export default function CalendarScreen() {
     return result;
   }, {});
   return <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }} edges={['top']}>
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} />}>
+    <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 40 }} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => reload()} />}>
       <Text style={{ color: theme.text, fontSize: 27, fontWeight: '800' }}>Lịch công việc</Text>
       <Text style={{ color: theme.muted }}>Theo dõi hạn hoàn thành công việc cá nhân.</Text>
       <View style={{ backgroundColor: theme.surface, borderRadius: 20, padding: 12, gap: 16 }}>
@@ -70,12 +64,12 @@ export default function CalendarScreen() {
         })}</View>
         <Pressable onPress={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelected(dayKey(now)); }}><Text style={{ color: theme.primary, textAlign: 'center', padding: 8 }}>Về hôm nay</Text></Pressable>
       </View>
-      {!!error && <View><Text accessibilityRole="alert" style={{ color: '#E11D48' }}>{error}</Text><Pressable onPress={reload}><Text style={{ color: theme.primary, padding: 10 }}>Thử lại</Text></Pressable></View>}
+      {!!error && <View><Text accessibilityRole="alert" style={{ color: '#E11D48' }}>{error}</Text><Pressable onPress={() => reload()}><Text style={{ color: theme.primary, padding: 10 }}>Thử lại</Text></Pressable></View>}
       <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700' }}>Ngày {selected?.split('-').reverse().join('/')} · {daily.length} việc</Text>
       {loading && <ActivityIndicator color={theme.primary} />}
       {!loading && !error && daily.length === 0 && <Text style={{ color: theme.muted }}>Không có công việc đến hạn trong ngày này.</Text>}
       {daily.map(task => {
-        const overdue = task.trangThai !== 'HOAN_THANH' && new Date(task.hanHoanThanh) < new Date();
+        const overdue = effectiveStatus(task, now) === 'QUA_HAN';
         return <Pressable key={task.id} onPress={() => router.push({ pathname: '/(tabs)/tasks', params: { taskId: task.id } })} style={{ padding: 16, borderRadius: 16, backgroundColor: theme.surface, borderWidth: 1, borderColor: overdue ? '#EF4444' : theme.border, gap: 8 }}>
           <Text style={{ color: theme.text, fontWeight: '700', fontSize: 16 }}>{task.tieuDe}</Text>
           <Text style={{ color: overdue ? '#EF4444' : theme.muted }}>{new Date(task.hanHoanThanh).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · {overdue ? 'Quá hạn' : labels[task.trangThai] || task.trangThai}</Text>

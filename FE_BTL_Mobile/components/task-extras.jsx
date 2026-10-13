@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { apiFetch } from '@/lib/api';
+import { useLiveRefresh } from '@/hooks/use-live-refresh';
 
 // Mount per task so requests and drafts cannot carry over between tasks.
 export function TaskExtras({ path, theme, userId, isLeader = false }) {
@@ -9,19 +10,14 @@ export function TaskExtras({ path, theme, userId, isLeader = false }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const load = useCallback(async () => {
-    setLoading(true); setError('');
-    try { setItems(await apiFetch(path)); }
-    catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  }, [path]);
-  useEffect(() => {
-    let active = true;
-    apiFetch(path).then(data => { if (active) setItems(data); })
-      .catch(err => { if (active) setError(err.message); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [path]);
+  const load = useCallback(async (silent = false, isCurrent = () => true) => {
+    if (silent && busy) return;
+    if (!silent) setLoading(true);
+    try { const data = await apiFetch(path); if (isCurrent()) { setItems(data ?? []); setError(''); } }
+    catch (err) { if (isCurrent()) setError(err.message); }
+    finally { if (isCurrent() && !silent) setLoading(false); }
+  }, [busy, path]);
+  useLiveRefresh(load, { identity: path, interval: 15000 });
   async function mutate(suffix, method, body) {
     setBusy(true); setError('');
     try {
@@ -33,9 +29,9 @@ export function TaskExtras({ path, theme, userId, isLeader = false }) {
   }
   return <View style={{ gap: 12, marginVertical: 18 }}>
     <Text style={{ color: theme.text, fontWeight: '700', fontSize: 17 }}>Bình luận nhóm</Text>
-    {<Pressable accessibilityRole="button" disabled={busy || loading} onPress={load}><Text style={{ color: theme.primary, paddingVertical: 6 }}>Làm mới bình luận</Text></Pressable>}
+    {<Pressable accessibilityRole="button" disabled={busy || loading} onPress={() => load()}><Text style={{ color: theme.primary, paddingVertical: 6 }}>Làm mới bình luận</Text></Pressable>}
     {loading && <ActivityIndicator color={theme.primary} />}
-    {!!error && <View><Text accessibilityRole="alert" style={{ color: '#E11D48' }}>{error}</Text><Pressable disabled={busy} onPress={load}><Text style={{ color: theme.primary, paddingVertical: 8 }}>Thử tải lại</Text></Pressable></View>}
+    {!!error && <View><Text accessibilityRole="alert" style={{ color: '#E11D48' }}>{error}</Text><Pressable disabled={busy} onPress={() => load()}><Text style={{ color: theme.primary, paddingVertical: 8 }}>Thử tải lại</Text></Pressable></View>}
     {!loading && !error && items.length === 0 && <Text style={{ color: theme.muted }}>Chưa có bình luận. Bắt đầu trao đổi tại đây.</Text>}
     {items.map(item => <View key={item.id} style={{ padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.background, gap: 6 }}>
       <>

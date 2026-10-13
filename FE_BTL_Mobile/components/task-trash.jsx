@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getTrashTasks, permanentlyDeleteTask, restoreTask } from '@/lib/tasks-api';
 import { confirmAction } from '@/lib/confirm-action';
+import { useLiveRefresh } from '@/hooks/use-live-refresh';
 
 export function TaskTrash({ visible, userId, theme, onClose, onChanged }) {
   const [items, setItems] = useState([]);
@@ -10,26 +11,15 @@ export function TaskTrash({ visible, userId, theme, onClose, onChanged }) {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState(null);
   const busyRef = useRef(false);
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false, isCurrent = () => true) => {
     if (!visible || !userId) return;
-    setLoading(true); setError('');
-    try { setItems(await getTrashTasks(userId) ?? []); }
-    catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    if (silent && busyRef.current) return;
+    if (!silent) setLoading(true);
+    try { const data = await getTrashTasks(userId); if (isCurrent()) { setItems(data ?? []); setError(''); } }
+    catch (err) { if (isCurrent()) setError(err.message); }
+    finally { if (isCurrent() && !silent) setLoading(false); }
   }, [userId, visible]);
-  useEffect(() => {
-    if (!visible || !userId) return undefined;
-    let active = true;
-    const timer = setTimeout(() => {
-      setLoading(true);
-      setError('');
-      getTrashTasks(userId)
-        .then((data) => { if (active) setItems(data ?? []); })
-        .catch((err) => { if (active) setError(err.message); })
-        .finally(() => { if (active) setLoading(false); });
-    }, 0);
-    return () => { active = false; clearTimeout(timer); };
-  }, [userId, visible]);
+  useLiveRefresh(load, { enabled: visible && !!userId, identity: userId });
   async function restore(task) {
     if (busyRef.current) return;
     busyRef.current = true; setBusyId(task.id); setError('');
@@ -62,7 +52,7 @@ export function TaskTrash({ visible, userId, theme, onClose, onChanged }) {
       <View style={{ maxHeight: '88%', minHeight: '55%', backgroundColor: theme.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}><View style={{ flex: 1 }}><Text style={{ color: theme.text, fontSize: 22, fontWeight: '800' }}>Thùng rác</Text><Text style={{ color: theme.muted, marginTop: 3, lineHeight: 20 }}>Giữ công việc trong 30 ngày kể từ khi xóa. Khôi phục để đưa về danh sách.</Text></View><TouchableOpacity accessibilityLabel="Đóng thùng rác" onPress={onClose} style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color={theme.text} /></TouchableOpacity></View>
         {loading && <ActivityIndicator color={theme.primary} />}
-        {!!error && <View><Text style={{ color: theme.danger }}>{error}</Text><TouchableOpacity onPress={load}><Text style={{ color: theme.notice, paddingVertical: 10 }}>Thử lại</Text></TouchableOpacity></View>}
+        {!!error && <View><Text style={{ color: theme.danger }}>{error}</Text><TouchableOpacity onPress={() => load()}><Text style={{ color: theme.notice, paddingVertical: 10 }}>Thử lại</Text></TouchableOpacity></View>}
         {!loading && !error && !items.length && <View style={{ alignItems: 'center', paddingVertical: 50 }}><Ionicons name="trash-outline" size={44} color={theme.muted} /><Text style={{ color: theme.muted, marginTop: 12 }}>Thùng rác đang trống.</Text></View>}
         <ScrollView contentContainerStyle={{ gap: 10 }}>{items.map(task => {
           const deleteAt = new Date(new Date(task.ngayXoa).getTime() + 30 * 86400000);
